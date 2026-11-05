@@ -18,12 +18,12 @@ A private website where you publish your novel **one chapter at a time** and col
 ```
 novel/
 ├─ backend/               The server (Node.js + Express)
-│  ├─ sql/001_schema.sql  The database tables (applied automatically)
+│  ├─ sql/                Database migrations (001_schema.sql, 002_optional_chapter_number.sql)
 │  ├─ src/                Server code (routes/, storage/, services/, middleware/)
 │  ├─ tests/              Automated tests
 │  └─ .env.example        Settings template  -> copy to backend/.env
 ├─ frontend/              The website (React + Vite)
-│  └─ src/                pages/ (reader), author/ (dashboard), components/
+│  └─ src/                pages/ (reader), author/ (dashboard), components/ (PagedBookReader)
 ├─ render.yaml            Optional deployment blueprint (Render.com)
 └─ README.md              This guide
 ```
@@ -116,9 +116,33 @@ Click *Sign in with Google* using the email you put in `AUTHOR_EMAILS`. You are 
 **Add reviewers** — Author > **Reviewers**. Paste their Google email addresses. Nothing is emailed; send them the site address yourself. They must sign in with that same Google account. **Remove access** locks them out immediately; their past feedback is kept.
 
 **Publish your first chapter**
-1. Author > **+ New chapter**. Enter the number (0 = prologue) and title. Optionally choose a .docx/.pdf.
-2. In the editor, read through the text. Fix anything the import flagged. Use **Preview** to see how readers will see it.
+1. Author > **+ New chapter**. Chapter numbers are **optional**—leave blank for a Prologue, Trailer, or unnumbered section, or enter a number for numbered chapters. Enter the title, and optionally choose a .docx/.pdf.
+2. In the editor, write or review your text. Use the **Preview** tab to see the authentic paperback page rendering before publishing.
 3. Click **Publish…**, optionally write what changed, and **Confirm and publish**. It is now **version 1**.
+
+**Physical Paperback Reader & Reading Features**
+* **Statement Paperback Format**: Chapters are typeset in physical Statement book format (`13.97 cm x 21.59 cm` / `5.5" x 8.5"`) with `1.27 cm` narrow margins and running headers/footers.
+* **Reading Modes**: Toggle between **📖 Pages** (paperback sheets) and **📜 Continuous** (single scroll) from the top bar.
+* **Page Turning**:
+  - Click or tap the left/right edges of the book sheet.
+  - Drag the bottom page scrubber slider.
+  - Use keyboard shortcuts: `←` / `PageUp` (prev) and `→` / `PageDown` / `Space` (next).
+  - Swipe horizontally on touchscreens and mobile devices.
+* **Reading Settings Toolbar**:
+  - **Font Size**: `A−` / `A+` buttons switch between 5 authentic paperback proportions (`Compact`, `Small`, `Medium` [default 10.5pt], `Large`, `Extra Large`).
+  - **Fonts**: *Literata* (Amazon Kindle standard), *Lora* (classic novel), *Garamond* (traditional literary serif), and *Clean Sans*.
+  - **Themes**: *Paper* (warm cream), *Sepia* (vintage parchment), and *Night* (low-contrast dark mode).
+  - **Alignment**: *Justified* (inter-word novel spacing) or *Flush Left*.
+* **Immersive Novel Experience**: Technical metadata (word count, version number, timestamps) is hidden on the chapter reading page so readers enjoy an uncluttered, real-book experience.
+
+**Formatting**
+* One line = one paragraph with traditional `2em` first-line indents (no empty lines between paragraphs).
+* Hyphenation is disabled (`hyphens: none`), allowing full words to wrap to the next line cleanly.
+* `---page---` inserts a manual page break (available via the **📄 Insert Page Break** button in the editor).
+* Standalone numbers (e.g. `1`, `2`, `I`, `II`) are automatically formatted as centered section breaks.
+* Date lines (e.g. `15TH January 2007 , Hospete`) automatically format centered with superscript ordinals (`15ᵀᴴ`).
+* `*italic*`, `**bold**`, a line with `***` for a scene break (ornament), `# Heading`, `> quote`, and `\*` for a literal asterisk.
+* Word imports convert italics, bold, headings, scene breaks, and document page breaks automatically.
 
 **Correct a few lines later**
 1. Author > open the chapter > edit the text.
@@ -132,8 +156,6 @@ Click *Sign in with Google* using the email you put in `AUTHOR_EMAILS`. You are 
 **Unpublish** — hides a chapter from reviewers without deleting anything. **Delete** (in a collapsed section) permanently removes the chapter, its versions, files and feedback.
 
 **Read feedback** — Author > **Feedback inbox**: filter by chapter or reviewer, oldest/newest first, unread only, mark read.
-
-**Formatting** — one line = one paragraph. `*italic*`, `**bold**`, a line with `***` for a scene break, `# Heading`, `> quote`, `\*` for a real asterisk. A Word import converts italics, bold, headings and scene breaks automatically. Pictures and tables are not imported. Old `.doc` files must be saved as `.docx` first. PDF import estimates paragraph breaks, so check it; `.docx` is more accurate. Scanned PDFs (pictures of pages) cannot be read.
 
 ## 11. Put it online (free-tier route)
 
