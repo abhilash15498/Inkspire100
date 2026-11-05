@@ -15,7 +15,10 @@ export default function NewChapter() {
   useEffect(() => {
     api
       .get('/author/chapters')
-      .then((d) => setNumber((cur) => cur || String(d.chapters.reduce((m, c) => Math.max(m, c.number), 0) + 1)))
+      .then((d) => {
+        const nums = (d.chapters || []).map((c) => c.number).filter((n) => n != null && !isNaN(n));
+        setNumber((cur) => cur || (nums.length > 0 ? String(Math.max(...nums) + 1) : '1'));
+      })
       .catch(() => {});
   }, []);
 
@@ -24,7 +27,8 @@ export default function NewChapter() {
     setBusy(true);
     setError('');
     try {
-      const created = await api.post('/author/chapters', { number: Number(number), title });
+      const numVal = number.trim() === '' ? null : Number(number);
+      const created = await api.post('/author/chapters', { number: numVal, title });
       const id = created.chapter.id;
       if (file) {
         const form = new FormData();
@@ -51,9 +55,20 @@ export default function NewChapter() {
       <PageHeader title="New chapter" subtitle="It starts as a draft. Reviewers see nothing until you publish." />
       <form onSubmit={submit} className="stack">
         <div className="field">
-          <label htmlFor="nc-number">Chapter number</label>
-          <input id="nc-number" type="number" min="0" max="9999" step="1" required value={number} onChange={(e) => setNumber(e.target.value)} />
-          <p className="hint muted small">Use 0 for a prologue.</p>
+          <label htmlFor="nc-number">
+            Chapter number <span className="muted small">(optional)</span>
+          </label>
+          <input
+            id="nc-number"
+            type="number"
+            min="0"
+            max="9999"
+            step="1"
+            placeholder="e.g. 1 (leave blank for Prologue / Epilogue)"
+            value={number}
+            onChange={(e) => setNumber(e.target.value)}
+          />
+          <p className="hint muted small">Leave empty for unnumbered sections like a Prologue or Epilogue.</p>
         </div>
         <div className="field">
           <label htmlFor="nc-title">Chapter title</label>

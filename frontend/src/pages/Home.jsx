@@ -31,7 +31,7 @@ export default function Home() {
         <div className="hero-actions">
           {resume ? (
             <Link className="btn btn-primary" to={`/chapters/${resume.id}`}>
-              Continue: Chapter {resume.number}
+              Continue: {resume.number != null ? `Chapter ${resume.number}` : resume.title}
             </Link>
           ) : list[0] ? (
             <Link className="btn btn-primary" to={`/chapters/${list[0].id}`}>
@@ -58,7 +58,7 @@ export default function Home() {
             {recent.map((c) => (
               <li key={c.id}>
                 <Link to={`/chapters/${c.id}`} className="card-link">
-                  <span className="num">Chapter {c.number}</span>
+                  {c.number != null && <span className="num">Chapter {c.number}</span>}
                   <span className="card-title">{c.title}</span>
                   <span className="muted small">
                     Version {c.version} · {fmtDate(c.updatedAt)}

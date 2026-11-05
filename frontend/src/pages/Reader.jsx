@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api.js';
 import FeedbackItem, { CategorySelect } from '../components/FeedbackItem.jsx';
+import { PagedBookReader } from '../components/PagedBookReader.jsx';
 import { ChapterText } from '../markdown.jsx';
 import { Chip, Loading, LoadError, Notice, errMsg, fmtDate, readingMinutes, useAsync, usePref } from '../ui.jsx';
 
-const SIZES = ['sm', 'md', 'lg', 'xl'];
+const SIZES = ['xs', 'sm', 'md', 'lg', 'xl'];
 
 function FeedbackSection({ chapterId, version }) {
   const mine = useAsync(() => api.get(`/chapters/${chapterId}/feedback`), [chapterId]);
@@ -90,6 +91,8 @@ export default function Reader() {
   const { data, error, loading } = useAsync(() => api.get(`/chapters/${id}`), [id]);
   const [size, setSize] = usePref('reader.size', 'md');
   const [theme, setTheme] = usePref('reader.theme', 'paper');
+  const [font, setFont] = usePref('reader.font', 'literata');
+  const [layout, setLayout] = usePref('reader.layout', 'justified');
   const ch = data?.chapter;
 
   useEffect(() => {
@@ -116,7 +119,7 @@ export default function Reader() {
   const idx = SIZES.indexOf(SIZES.includes(size) ? size : 'md');
 
   return (
-    <div className={`reader theme-${theme} size-${SIZES[idx]}`}>
+    <div className={`reader theme-${theme} size-${SIZES[idx]} font-${font} layout-${layout}`}>
       <div className="reader-tools" role="group" aria-label="Reading settings">
         <Link to="/chapters" className="btn btn-ghost btn-small">
           ← Chapters
@@ -128,61 +131,54 @@ export default function Reader() {
         <button className="btn btn-ghost btn-small" onClick={() => setSize(SIZES[Math.min(SIZES.length - 1, idx + 1)])} disabled={idx === SIZES.length - 1} aria-label="Larger text">
           A+
         </button>
+        <select id="font-select" value={font} onChange={(e) => setFont(e.target.value)} aria-label="Reading font">
+          <option value="literata">Literata (Kindle)</option>
+          <option value="lora">Lora (Book)</option>
+          <option value="garamond">Garamond</option>
+          <option value="sans">Clean Sans</option>
+        </select>
+        <select id="layout-select" value={layout} onChange={(e) => setLayout(e.target.value)} aria-label="Text alignment">
+          <option value="clean">Flush Left</option>
+          <option value="justified">Justified</option>
+        </select>
         <label className="sr-only" htmlFor="theme-select">
           Page colour
         </label>
-        <select id="theme-select" value={theme} onChange={(e) => setTheme(e.target.value)}>
+        <select id="theme-select" value={theme} onChange={(e) => setTheme(e.target.value)} aria-label="Color theme">
           <option value="paper">Paper</option>
           <option value="sepia">Sepia</option>
           <option value="night">Night</option>
         </select>
       </div>
 
-      <article className="chapter">
-        <header className="chapter-head">
-          <p className="eyebrow">Chapter {ch.number}</p>
-          <h1 className="display">{ch.title}</h1>
-          <p className="muted small">
-            {ch.wordCount.toLocaleString()} words · about {readingMinutes(ch.wordCount)} min · Version {ch.version}, updated {fmtDate(ch.updatedAt)}
-          </p>
-          {ch.version > 1 && ch.changeNote && (
-            <p className="update-note">
-              <Chip tone="accent">What changed</Chip> {ch.changeNote}
-            </p>
-          )}
-          {ch.updatedSinceMyFeedback && <Notice kind="info">This chapter has been updated since you last sent feedback on it.</Notice>}
-        </header>
-        <ChapterText text={ch.content} />
-        <p className="end-mark" aria-hidden="true">
-          ❦
-        </p>
-        {ch.pdf && (
-          <p className="small">
-            <a href={api.href(`/chapters/${ch.id}/pdf`)} target="_blank" rel="noopener noreferrer">
-              Open this chapter as a PDF
-            </a>{' '}
-            <span className="muted">({ch.pdf.name})</span>
-          </p>
-        )}
-        <nav className="chapter-nav" aria-label="Chapter navigation">
-          {ch.prevId ? (
-            <Link className="btn" to={`/chapters/${ch.prevId}`}>
-              ← Previous chapter
-            </Link>
-          ) : (
-            <span />
-          )}
-          {ch.nextId ? (
-            <Link className="btn btn-primary" to={`/chapters/${ch.nextId}`}>
-              Next chapter →
-            </Link>
-          ) : (
-            <span />
-          )}
-        </nav>
-      </article>
+      {(() => {
+        const eyebrow =
+          ch.number != null && ch.number !== '' && Number(ch.number) > 0
+            ? `Chapter ${ch.number}`
+            : ch.number != null && ch.number !== '' && Number(ch.number) === 0 && !ch.title?.toLowerCase().includes('prologue')
+              ? 'Prologue'
+              : null;
 
-      <FeedbackSection chapterId={ch.id} version={ch.version} />
+        return (
+          <PagedBookReader
+            title={ch.title}
+            bookTitle="Is It Me or You as Well?"
+            eyebrow={eyebrow}
+            content={ch.content}
+            wordCount={ch.wordCount}
+            version={ch.version}
+            updatedAt={ch.updatedAt}
+            changeNote={ch.changeNote}
+            updatedSinceMyFeedback={ch.updatedSinceMyFeedback}
+            pdf={ch.pdf}
+            apiHref={ch.pdf ? api.href(`/chapters/${ch.id}/pdf`) : null}
+            prevId={ch.prevId}
+            nextId={ch.nextId}
+          >
+            <FeedbackSection chapterId={ch.id} version={ch.version} />
+          </PagedBookReader>
+        );
+      })()}
     </div>
   );
 }

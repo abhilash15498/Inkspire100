@@ -65,7 +65,7 @@ export function readerRoutes({ db, storage }) {
               (SELECT max(f.version_number) FROM feedback f WHERE f.chapter_id = c.id AND f.user_id = $1) AS my_last_feedback_version
          FROM chapters c JOIN ${PUBLISHED_JOIN}
         WHERE c.is_published
-        ORDER BY c.chapter_number`,
+        ORDER BY c.sort_order ASC, c.chapter_number ASC NULLS LAST, c.id ASC`,
       [req.user.id],
     );
     res.json({ chapters: rows.map(chapterSummary) });
@@ -84,14 +84,17 @@ export function readerRoutes({ db, storage }) {
     );
     if (!rows[0]) throw notFound('This chapter is not available.');
     const c = rows[0];
-    const [prev, next, pdf] = await Promise.all([
+    const [adjacent, pdf] = await Promise.all([
       db.query(
-        'SELECT id, chapter_number FROM chapters WHERE is_published AND chapter_number < $1 ORDER BY chapter_number DESC LIMIT 1',
-        [c.number],
-      ),
-      db.query(
-        'SELECT id, chapter_number FROM chapters WHERE is_published AND chapter_number > $1 ORDER BY chapter_number ASC LIMIT 1',
-        [c.number],
+        `WITH ordered AS (
+           SELECT id,
+                  LAG(id) OVER (ORDER BY sort_order ASC, chapter_number ASC NULLS LAST, id ASC) AS prev_id,
+                  LEAD(id) OVER (ORDER BY sort_order ASC, chapter_number ASC NULLS LAST, id ASC) AS next_id
+             FROM chapters
+            WHERE is_published
+         )
+         SELECT prev_id, next_id FROM ordered WHERE id = $1`,
+        [id],
       ),
       db.query(
         `SELECT id, original_name, size_bytes FROM chapter_files
@@ -103,8 +106,8 @@ export function readerRoutes({ db, storage }) {
       chapter: {
         ...chapterSummary(c),
         content: c.content,
-        prevId: prev.rows[0]?.id ?? null,
-        nextId: next.rows[0]?.id ?? null,
+        prevId: adjacent.rows[0]?.prev_id ?? null,
+        nextId: adjacent.rows[0]?.next_id ?? null,
         pdf: pdf.rows[0]
           ? { name: pdf.rows[0].original_name, sizeBytes: pdf.rows[0].size_bytes, url: `/api/chapters/${id}/pdf` }
           : null,

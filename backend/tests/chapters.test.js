@@ -131,3 +131,17 @@ test('reader navigation: previous/next chapter ids', async () => {
   const mid = (await t.alice.get(`/api/chapters/${b}`)).data.chapter;
   assert.equal(mid.prevId, a);
 });
+
+test('unnumbered chapter (e.g. Prologue) has no required chapter number and navigates correctly', async () => {
+  const res = assertStatus(await t.author.post(A, { title: 'Prologue', content: 'In the beginning.' }), 201);
+  assert.equal(res.data.chapter.number, null);
+  assert.equal(res.data.chapter.title, 'Prologue');
+
+  // Publish it
+  assertStatus(await t.author.post(`${A}/${res.data.chapter.id}/publish`, {}), 200);
+
+  // Reviewer can read it
+  const readRes = assertStatus(await t.alice.get(`/api/chapters/${res.data.chapter.id}`), 200);
+  assert.equal(readRes.data.chapter.number, null);
+  assert.equal(readRes.data.chapter.title, 'Prologue');
+});

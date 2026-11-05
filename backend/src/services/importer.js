@@ -78,13 +78,17 @@ export function htmlToChapterText(html) {
       .filter(Boolean);
     return '\n\n' + lines.map((l) => `> ${l}`).join('\n') + '\n\n';
   });
+  s = s.replace(/<hr\s+class="page-break"\s*\/?>/gi, '\n\n---page---\n\n');
   s = s.replace(/<\/(p|li|tr)>/g, '\n\n').replace(/<[^>]+>/g, '');
   s = decodeEntities(s);
 
   const lines = s
     .split('\n')
     .map((l) => l.replace(/[ \t ]+/g, ' ').trim())
-    .map((l) => (/^(?:\\\*\s*){3,}$/.test(l) || /^[-–—_=~]{3,}$/.test(l) ? '***' : l));
+    .map((l) => {
+      if (/^[-–—_=~*]{0,3}page[-–—_=~*]{0,3}$/i.test(l)) return '---page---';
+      return /^(?:\\\*\s*){3,}$/.test(l) || /^[-–—_=~]{3,}$/.test(l) ? '***' : l;
+    });
   return lines
     .join('\n')
     .replace(/\n{3,}/g, '\n\n')
@@ -97,7 +101,10 @@ async function extractDocx(buffer) {
   try {
     result = await mammoth.convertToHtml(
       { buffer },
-      { convertImage: mammoth.images.imgElement(async () => ({ src: 'image-removed' })) },
+      {
+        convertImage: mammoth.images.imgElement(async () => ({ src: 'image-removed' })),
+        styleMap: ["br[type='page'] => hr.page-break"],
+      },
     );
   } catch {
     throw new HttpError(422, 'That Word file could not be read. Try opening it in Word and saving it again as .docx.');
@@ -113,6 +120,7 @@ const LIGATURES = { 'ﬁ': 'fi', 'ﬂ': 'fl', 'ﬀ': 'ff', 'ﬃ': 'ffi', 'ﬄ': 
 /** Turns raw PDF text (hard-wrapped lines) back into paragraphs. Best effort. */
 export function reflowPdfText(raw) {
   const cleaned = raw
+    .replace(/\f/g, '\n\n---page---\n\n')
     .replace(/\r/g, '')
     .replace(/[ﬁﬂﬀﬃﬄ]/g, (c) => LIGATURES[c])
     .split('\n')

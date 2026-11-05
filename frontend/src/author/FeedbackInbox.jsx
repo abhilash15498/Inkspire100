@@ -63,7 +63,7 @@ export default function FeedbackInbox() {
             <option value="">All chapters</option>
             {(chapters.data?.chapters || []).map((c) => (
               <option key={c.id} value={c.id}>
-                {c.number}. {c.title}
+                {c.number != null ? `${c.number}. ` : ''}{c.title}
               </option>
             ))}
           </select>

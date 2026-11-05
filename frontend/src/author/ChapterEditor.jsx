@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
-import { ChapterText, countWords } from '../markdown.jsx';
+import { ChapterText, countWords, estimatePages } from '../markdown.jsx';
+import { PagedBookReader } from '../components/PagedBookReader.jsx';
 import { Chip, Loading, LoadError, Notice, StatusChip, errMsg, fmtDate, fmtDateTime } from '../ui.jsx';
 
-const toForm = (c) => ({ number: String(c.number), title: c.title, content: c.content });
+const toForm = (c) => ({ number: c.number != null ? String(c.number) : '', title: c.title, content: c.content });
 
 export default function ChapterEditor() {
   const { id } = useParams();
@@ -51,7 +52,15 @@ export default function ChapterEditor() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [path, applyServer]);
 
-  const dirty = useMemo(() => !!chapter && !!form && (form.number !== String(chapter.number) || form.title !== chapter.title || form.content !== chapter.content), [chapter, form]);
+  const dirty = useMemo(
+    () =>
+      !!chapter &&
+      !!form &&
+      (form.number !== (chapter.number != null ? String(chapter.number) : '') ||
+        form.title !== chapter.title ||
+        form.content !== chapter.content),
+    [chapter, form]
+  );
 
   useEffect(() => {
     if (!dirty) return undefined;
@@ -79,8 +88,24 @@ export default function ChapterEditor() {
     }
   };
 
+  const insertPageBreak = () => {
+    const textarea = document.getElementById('ed-content');
+    if (!textarea) return;
+    const start = textarea.selectionStart ?? (form.content || '').length;
+    const end = textarea.selectionEnd ?? (form.content || '').length;
+    const old = form.content || '';
+    const insert = '\n\n---page---\n\n';
+    const next = old.slice(0, start) + insert + old.slice(end);
+    setForm((cur) => ({ ...cur, content: next }));
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + insert.length, start + insert.length);
+    }, 0);
+  };
+
   const saveDraft = async () => {
-    const d = await api.put(path, { number: Number(form.number), title: form.title, content: form.content });
+    const numVal = form.number.trim() === '' ? null : Number(form.number);
+    const d = await api.put(path, { number: numVal, title: form.title, content: form.content });
     applyServer(d.chapter);
     return d.chapter;
   };
@@ -106,14 +131,18 @@ export default function ChapterEditor() {
     run(async () => {
       if (!window.confirm('Hide this chapter from reviewers? Nothing is deleted, and you can publish it again.')) return;
       const d = await api.post(`${path}/unpublish`);
-      applyServer({ ...d.chapter, ...(dirty ? { number: Number(form.number), title: form.title, content: form.content } : {}) });
+      applyServer({
+        ...d.chapter,
+        ...(dirty ? { number: form.number.trim() === '' ? null : Number(form.number), title: form.title, content: form.content } : {}),
+      });
       if (dirty) setForm(form);
       say('success', 'The chapter is hidden from reviewers.');
     });
 
   const onDelete = () =>
     run(async () => {
-      if (!window.confirm(`Delete Chapter ${chapter.number} permanently, including its version history, uploaded files and all reviewer feedback on it? This cannot be undone.`)) return;
+      const label = chapter.number != null ? `Chapter ${chapter.number}` : `"${chapter.title}"`;
+      if (!window.confirm(`Delete ${label} permanently, including its version history, uploaded files and all reviewer feedback on it? This cannot be undone.`)) return;
       await api.del(path);
       navigate('/author');
     });
@@ -193,7 +222,7 @@ export default function ChapterEditor() {
             <Link to="/author">← All chapters</Link>
           </p>
           <h1>
-            Chapter {chapter.number}: {chapter.title}
+            {chapter.number != null ? `Chapter ${chapter.number}: ` : ''}{chapter.title}
           </h1>
           <p className="muted small">
             <StatusChip status={chapter.status} />{' '}
@@ -245,8 +274,18 @@ export default function ChapterEditor() {
         <section aria-label="Write and publish">
           <div className="grid-2">
             <div className="field">
-              <label htmlFor="ed-number">Chapter number</label>
-              <input id="ed-number" type="number" min="0" max="9999" value={form.number} onChange={set('number')} />
+              <label htmlFor="ed-number">
+                Chapter number <span className="muted small">(optional)</span>
+              </label>
+              <input
+                id="ed-number"
+                type="number"
+                min="0"
+                max="9999"
+                placeholder="Leave blank for unnumbered"
+                value={form.number}
+                onChange={set('number')}
+              />
             </div>
             <div className="field">
               <label htmlFor="ed-title">Title</label>
@@ -260,16 +299,41 @@ export default function ChapterEditor() {
                 Write
               </button>
               <button className={preview ? 'active' : ''} aria-pressed={preview} onClick={() => setPreview(true)}>
-                Preview
+                Preview (Pages)
               </button>
             </div>
-            <span className="muted small">{countWords(form.content).toLocaleString()} words</span>
+            {!preview && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-small"
+                onClick={insertPageBreak}
+                title="Insert a page break marker (---page---) to start a new page"
+              >
+                📄 Insert Page Break
+              </button>
+            )}
+            <span className="muted small">
+              {countWords(form.content).toLocaleString()} words · ~{estimatePages(form.content)} pages
+            </span>
           </div>
 
           {preview ? (
             <div className="preview-pane">
-              <h2 className="display">{form.title}</h2>
-              <ChapterText text={form.content} />
+              <div className="reader theme-paper size-md font-literata layout-justified">
+                <PagedBookReader
+                  title={form.title || 'Untitled'}
+                  bookTitle="Is It Me or You as Well?"
+                  eyebrow={
+                    form.number !== '' && Number(form.number) > 0
+                      ? `Chapter ${form.number}`
+                      : form.number !== '' && Number(form.number) === 0 && !form.title?.toLowerCase().includes('prologue')
+                        ? 'Prologue'
+                        : null
+                  }
+                  content={form.content}
+                  authorPreview={true}
+                />
+              </div>
             </div>
           ) : (
             <div className="field">
@@ -285,7 +349,8 @@ export default function ChapterEditor() {
             <ul>
               <li>Press <kbd>Enter</kbd> to start a new paragraph. Blank lines are ignored.</li>
               <li><code>*italic*</code> gives <em>italic</em>, and <code>**bold**</code> gives <strong>bold</strong>.</li>
-              <li>A line with only <code>***</code> makes a scene break (a small ornament).</li>
+              <li><code>***</code> makes a scene break (a small ornament).</li>
+              <li><code>---page---</code> starts a new page (splits content into separate pages).</li>
               <li><code># Heading</code> makes a heading, and <code>&gt; text</code> makes an indented quote.</li>
               <li>To show a real asterisk, type <code>\*</code>.</li>
             </ul>

@@ -17,7 +17,7 @@ export default function Chapters() {
           {list.map((c) => (
             <li key={c.id}>
               <Link to={`/chapters/${c.id}`} className="chapter-row">
-                <span className="num">{c.number}</span>
+                <span className="num">{c.number != null ? c.number : '—'}</span>
                 <span className="chapter-main">
                   <span className="card-title">{c.title}</span>
                   <span className="muted small">

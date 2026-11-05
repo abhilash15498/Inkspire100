@@ -32,6 +32,7 @@ export function loadConfig(env = process.env) {
     sessionSecret: defaultSessionSecret,
     googleClientId: defaultGoogleClientId,
     authorEmails: defaultAuthorEmails,
+    openRegistration: env.OPEN_REGISTRATION !== 'false',
     // Extra browser origins allowed to call the API (only needed if the website
     // and the API are hosted on different domains).
     allowedOrigins: [

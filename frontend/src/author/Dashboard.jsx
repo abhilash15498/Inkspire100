@@ -55,12 +55,14 @@ export default function Dashboard() {
             <tbody>
               {list.map((c) => (
                 <tr key={c.id}>
-                  <td>{c.number}</td>
+                  <td>{c.number != null ? c.number : '–'}</td>
                   <td>
                     <Link to={`/author/chapters/${c.id}`} className="strong">
                       {c.title}
                     </Link>
-                    <div className="muted small">{c.wordCount.toLocaleString()} words</div>
+                    <div className="muted small">
+                      {c.wordCount.toLocaleString()} words · ~{Math.max(1, Math.ceil(c.wordCount / 260))} pages
+                    </div>
                   </td>
                   <td>
                     <StatusChip status={c.status} />

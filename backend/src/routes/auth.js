@@ -12,6 +12,7 @@ export function authRoutes({ config, db, verifyGoogle }) {
       googleClientId: config.googleClientId,
       bookTitle: rows[0]?.title || '',
       authorName: rows[0]?.author_name || '',
+      openRegistration: config.openRegistration,
     });
   });
 
@@ -30,13 +31,29 @@ export function authRoutes({ config, db, verifyGoogle }) {
 
     const isAuthor = config.authorEmails.includes(email);
     if (!isAuthor) {
-      const access = await db.query('SELECT id FROM reviewer_access WHERE email = $1 AND revoked_at IS NULL', [email]);
-      if (access.rows.length === 0) {
+      const access = await db.query('SELECT id, revoked_at FROM reviewer_access WHERE email = $1', [email]);
+      if (access.rows.length > 0 && access.rows[0].revoked_at !== null) {
         throw new HttpError(
           403,
-          'This Google account has not been invited. Ask the author to add your email address.',
-          'not_invited',
+          'Your reviewer access has been revoked by the author.',
+          'revoked',
         );
+      }
+      if (access.rows.length === 0) {
+        if (config.openRegistration) {
+          await db.query(
+            `INSERT INTO reviewer_access (email, note)
+             VALUES ($1, 'Self-registered reader')
+             ON CONFLICT (email) DO NOTHING`,
+            [email],
+          );
+        } else {
+          throw new HttpError(
+            403,
+            'This Google account has not been invited. Ask the author to add your email address.',
+            'not_invited',
+          );
+        }
       }
     }
 

@@ -84,11 +84,15 @@ export default function Login() {
   return (
     <main className="login">
       <div className="login-card">
-        <p className="eyebrow">A private reading copy</p>
+        <p className="eyebrow">{config?.openRegistration ? 'Early Reader Edition' : 'A private reading copy'}</p>
         <h1 className="display">{config?.bookTitle || 'The Novel'}</h1>
         {config?.authorName && <p className="muted">by {config.authorName}</p>}
         <hr className="scene-break" aria-hidden="true" />
-        <p>This manuscript is shared with invited readers only. Sign in with the Google account the author invited.</p>
+        <p>
+          {config?.openRegistration
+            ? 'Sign in with your Google account to read published chapters and leave your feedback.'
+            : 'This manuscript is shared with invited readers only. Sign in with the Google account the author invited.'}
+        </p>
         {isDev ? (
           <div className="dev-login-options" style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center' }}>
             <p className="small bold" style={{ color: 'var(--accent, #6b4423)', margin: 0 }}>

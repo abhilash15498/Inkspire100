@@ -17,6 +17,7 @@ const statusOf = (r) => (r.is_published ? 'published' : r.published_version ? 'u
 const chapterListRow = (r) => ({
   id: r.id,
   number: r.number,
+  sortOrder: r.sort_order,
   title: r.title,
   status: statusOf(r),
   publishedVersion: r.published_version,
@@ -29,7 +30,7 @@ const chapterListRow = (r) => ({
 });
 
 const LIST_SQL = `
-  SELECT c.id, c.chapter_number AS number, c.title, c.is_published, c.published_version, c.updated_at,
+  SELECT c.id, c.chapter_number AS number, c.sort_order, c.title, c.is_published, c.published_version, c.updated_at,
          v.created_at AS last_published_at, v.title AS published_title,
          (v.content IS DISTINCT FROM c.content) AS content_differs,
          CASE WHEN btrim(c.content) = '' THEN 0
@@ -75,6 +76,7 @@ export function authorRoutes({ config, db, storage }) {
     return {
       id: c.id,
       number: c.chapter_number,
+      sortOrder: c.sort_order,
       title: c.title,
       content: c.content,
       status: statusOf(c),
@@ -90,31 +92,53 @@ export function authorRoutes({ config, db, storage }) {
 
   function chapterFields(body, { partial }) {
     return {
-      number: integer(body?.number, { name: 'Chapter number', min: 0, max: 9999, required: !partial }),
+      number: integer(body?.number, { name: 'Chapter number', min: 0, max: 9999, required: false }),
       title: text(body?.title, { name: 'Title', required: !partial, max: 200 }),
       content: text(body?.content, { name: 'Chapter text', max: 1_000_000, trim: false }),
     };
   }
 
   const duplicateNumber = (err, number) =>
-    err.code === '23505' ? new HttpError(409, `Chapter ${number} already exists. Choose a different number.`) : err;
+    err.code === '23505' && number != null ? new HttpError(409, `Chapter ${number} already exists. Choose a different number.`) : err;
 
   // ---------- Chapters ----------
   r.get('/chapters', async (_req, res) => {
-    const { rows } = await db.query(`${LIST_SQL} ORDER BY c.chapter_number`);
+    const { rows } = await db.query(`${LIST_SQL} ORDER BY c.sort_order ASC, c.chapter_number ASC NULLS LAST, c.id ASC`);
     res.json({ chapters: rows.map(chapterListRow) });
   });
 
   r.post('/chapters', async (req, res) => {
     const f = chapterFields(req.body, { partial: false });
+    const num = (req.body?.number === '' || req.body?.number === null || req.body?.number === undefined)
+      ? null
+      : integer(req.body.number, { name: 'Chapter number', min: 0, max: 9999, required: false });
+
+    let sortOrder = req.body?.sortOrder !== undefined
+      ? integer(req.body.sortOrder, { name: 'Sort order', min: -9999, max: 999999 })
+      : undefined;
+
+    if (sortOrder === undefined) {
+      if (num !== null && num !== undefined) {
+        sortOrder = num;
+      } else {
+        const lowerTitle = (f.title || '').toLowerCase();
+        if (lowerTitle.includes('prologue') || lowerTitle.includes('intro') || lowerTitle.includes('preface')) {
+          sortOrder = 0;
+        } else {
+          const maxQ = await db.query('SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM chapters');
+          sortOrder = maxQ.rows[0].next_order;
+        }
+      }
+    }
+
     try {
       const { rows } = await db.query(
-        'INSERT INTO chapters (chapter_number, title, content) VALUES ($1, $2, $3) RETURNING id',
-        [f.number, f.title, f.content ?? ''],
+        'INSERT INTO chapters (chapter_number, sort_order, title, content) VALUES ($1, $2, $3, $4) RETURNING id',
+        [num, sortOrder, f.title, f.content ?? ''],
       );
       res.status(201).json({ chapter: await chapterDetail(db, rows[0].id) });
     } catch (err) {
-      throw duplicateNumber(err, f.number);
+      throw duplicateNumber(err, num);
     }
   });
 
@@ -126,17 +150,37 @@ export function authorRoutes({ config, db, storage }) {
   r.put('/chapters/:id', async (req, res) => {
     const id = parseId(req.params.id);
     const f = chapterFields(req.body, { partial: true });
+    const hasNumber = req.body !== null && typeof req.body === 'object' && 'number' in req.body;
+    const numVal = hasNumber && (req.body.number === '' || req.body.number === null)
+      ? null
+      : hasNumber
+        ? integer(req.body.number, { name: 'Chapter number', min: 0, max: 9999, required: false })
+        : null;
+    const hasTitle = req.body !== null && typeof req.body === 'object' && 'title' in req.body;
+    const hasContent = req.body !== null && typeof req.body === 'object' && 'content' in req.body;
+    const hasSortOrder = req.body !== null && typeof req.body === 'object' && 'sortOrder' in req.body;
+    const sortOrderVal = hasSortOrder ? integer(req.body.sortOrder, { name: 'Sort order', min: -9999, max: 999999 }) : undefined;
+
     try {
       const upd = await db.query(
         `UPDATE chapters
-            SET chapter_number = COALESCE($2, chapter_number), title = COALESCE($3, title),
-                content = COALESCE($4, content), updated_at = now()
+            SET chapter_number = CASE WHEN $2::boolean THEN $3::integer ELSE chapter_number END,
+                title = CASE WHEN $4::boolean THEN $5::text ELSE title END,
+                content = CASE WHEN $6::boolean THEN $7::text ELSE content END,
+                sort_order = CASE WHEN $8::boolean THEN $9::integer ELSE sort_order END,
+                updated_at = now()
           WHERE id = $1 RETURNING id`,
-        [id, f.number ?? null, f.title ?? null, f.content ?? null],
+        [
+          id,
+          hasNumber, numVal,
+          hasTitle, f.title ?? null,
+          hasContent, f.content ?? null,
+          hasSortOrder, sortOrderVal ?? 0,
+        ],
       );
       if (!upd.rows[0]) throw notFound('Chapter not found.');
     } catch (err) {
-      throw duplicateNumber(err, f.number);
+      throw duplicateNumber(err, numVal);
     }
     res.json({ chapter: await chapterDetail(db, id) });
   });
