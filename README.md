@@ -157,7 +157,34 @@ Click *Sign in with Google* using the email you put in `AUTHOR_EMAILS`. You are 
 
 **Read feedback** — Author > **Feedback inbox**: filter by chapter or reviewer, oldest/newest first, unread only, mark read.
 
-## 11. Put it online (free-tier route)
+## 11. E-Commerce Storefront, Monetization & Legal Compliance
+
+When preparing for monetization (eBook sales, physical print orders, pre-orders, and payment gateways), the platform features a complete public-facing storefront alongside the private manuscript reader:
+
+* **E-Commerce Storefront (`/`)**:
+  - **Realistic 3D Book Presentation**: CSS-modeled 3D physical book cover with realistic spine depth, shadows, and Statement paperback dimensions.
+  - **Interactive "Look Inside" Preview**: Visitors can read the opening Prologue directly on the landing page in authentic paperback typesetting.
+  - **3 Purchase & Pre-Order Tiers**:
+    1. *Digital Early Access Edition (₹199)*: Immediate online access to the paged web reader, themes, and ongoing author updates.
+    2. *Collector's Signed Paperback (₹399)*: Physical 5.5" × 8.5" book on 80 GSM cream paper, author signature, custom bookmark, plus complimentary instant digital reader access.
+    3. *Patron & Founder's Edition (₹699)*: Signed copy with a personalized handwritten dedication and the reader's name credited in the official book Acknowledgments.
+  - **Pre-Order Checkout Modal**: Customer details form, shipping address capture for paperbacks, and gateway selection (UPI, Google Pay, PhonePe, Cards, NetBanking) with order reservation receipt generation.
+  - **Reader Praise & FAQ**: Testimonial quotes from beta reviewers and an accordion answering common questions about access, delivery, beta reviewer access, and payments.
+
+* **About the Novel & Author (`/about`)**:
+  - The story behind *Is It Me or You as Well?*, from Hospete 2007 to college years.
+  - Core themes: Middle-class expectations, nostalgia, unscripted romance, and finding one's authentic voice.
+  - Author biography (H.M. Abhilash), creative process, and literary inquiry contact details.
+
+* **Legal Compliance for Payment Gateways (`/privacy` & `/terms`)**:
+  - **Privacy Policy**: Covers Google OAuth, cookies/sessions, user feedback storage, DPDP Act 2023 compliance, and Grievance Officer details.
+  - **Terms of Service & Refund Policy**: Explicit intellectual property copyright protection, digital license terms, physical book shipping timelines (4–7 business days in India), cancellation and replacement policies for payment processors (Razorpay, Stripe, PayU, LemonSqueezy).
+
+* **Route Architecture**:
+  - Public visitors can browse the Store, About page, Sample chapter, Privacy Policy, and Terms freely without sign-in.
+  - The Chapter Library (`/chapters`), Paged Reader (`/chapters/:id`), and Author Panel (`/author`) remain strictly protected via Google OAuth. Invited beta reviewers continue reading and leaving feedback for free.
+
+## 12. Put it online (free-tier route)
 
 1. Put the project on **GitHub** (private repository). Do not include `.env`.
 2. In **Render**: *New > Blueprint*, pick the repository (it reads `render.yaml`), or *New > Web Service* with:

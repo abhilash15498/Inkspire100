@@ -52,6 +52,7 @@ export async function startTestServer(overrides = {}) {
     DISABLE_RATE_LIMIT: 'true',
     MAX_UPLOAD_MB: '1',
     STATIC_DIR: path.join(dir, 'no-static'),
+    OPEN_REGISTRATION: 'false',
     ...overrides,
   });
   const storage = new LocalStorage(dir);

@@ -3,6 +3,9 @@ import { useAuth } from './auth.jsx';
 import { AuthorLayout, Layout, Loading, PageHeader } from './ui.jsx';
 import Login from './pages/Login.jsx';
 import Home from './pages/Home.jsx';
+import About from './pages/About.jsx';
+import Privacy from './pages/Privacy.jsx';
+import Terms from './pages/Terms.jsx';
 import Book from './pages/Book.jsx';
 import Chapters from './pages/Chapters.jsx';
 import Reader from './pages/Reader.jsx';
@@ -39,24 +42,49 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route
-        element={
-          <RequireAuth>
-            <Layout />
-          </RequireAuth>
-        }
-      >
+      <Route element={<Layout />}>
+        {/* Public Storefront & Legal Routes */}
         <Route index element={<Home />} />
+        <Route path="about" element={<About />} />
+        <Route path="privacy" element={<Privacy />} />
+        <Route path="terms" element={<Terms />} />
         <Route path="book" element={<Book />} />
-        <Route path="chapters" element={<Chapters />} />
-        <Route path="chapters/:id" element={<Reader />} />
-        <Route path="feedback" element={<MyFeedback />} />
+
+        {/* Protected Reader & Feedback Routes */}
+        <Route
+          path="chapters"
+          element={
+            <RequireAuth>
+              <Chapters />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="chapters/:id"
+          element={
+            <RequireAuth>
+              <Reader />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="feedback"
+          element={
+            <RequireAuth>
+              <MyFeedback />
+            </RequireAuth>
+          }
+        />
+
+        {/* Protected Author Dashboard */}
         <Route
           path="author"
           element={
-            <RequireAuthor>
-              <AuthorLayout />
-            </RequireAuthor>
+            <RequireAuth>
+              <RequireAuthor>
+                <AuthorLayout />
+              </RequireAuthor>
+            </RequireAuth>
           }
         >
           <Route index element={<Dashboard />} />
@@ -66,6 +94,7 @@ export default function App() {
           <Route path="reviewers" element={<Reviewers />} />
           <Route path="book" element={<BookEditor />} />
         </Route>
+
         <Route path="*" element={<PageHeader title="Page not found" />} />
       </Route>
     </Routes>

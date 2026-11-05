@@ -113,7 +113,7 @@ export function renderBlock(b, i) {
     );
   }
   return (
-    <p key={i} className={b.continued ? 'paragraph-continuation' : ''}>
+    <p key={i} className={b.continued ? 'paragraph-continuation' : undefined}>
       {renderInline(b.text, `b${i}-`)}
     </p>
   );

@@ -43,6 +43,54 @@ const MY_FEEDBACK_SQL = `
 /** Everything a signed-in person (author or reviewer) can read. Drafts are never included. */
 export function readerRoutes({ db, storage }) {
   const r = Router();
+
+  // Public book metadata (available on storefront & about page)
+  r.get('/public/book', async (_req, res) => {
+    try {
+      const { rows } = await db.query('SELECT * FROM book_details WHERE id = 1');
+      const b = rows[0] || {};
+      res.json({
+        title: b.title || 'Is It Me or You as Well?',
+        authorName: b.author_name || 'H.M. Abhilash',
+        tagline: b.tagline || 'A candid story of middle-class youth, dreams, and navigating life one awkward chapter at a time.',
+        synopsis: b.synopsis || '',
+      });
+    } catch {
+      res.json({
+        title: 'Is It Me or You as Well?',
+        authorName: 'H.M. Abhilash',
+        tagline: 'A candid story of middle-class youth, dreams, and navigating life one awkward chapter at a time.',
+        synopsis: '',
+      });
+    }
+  });
+
+  // Public sample chapter preview
+  r.get('/sample', async (_req, res) => {
+    try {
+      const { rows } = await db.query(
+        `SELECT c.id, c.chapter_number AS number, v.title, v.content, v.word_count
+           FROM chapters c JOIN ${PUBLISHED_JOIN}
+          WHERE c.is_published
+          ORDER BY c.sort_order ASC, c.chapter_number ASC NULLS LAST, c.id ASC
+          LIMIT 1`,
+      );
+      if (rows[0]) {
+        res.json({
+          id: rows[0].id,
+          number: rows[0].number,
+          title: rows[0].title,
+          content: rows[0].content,
+          wordCount: rows[0].word_count,
+        });
+      } else {
+        res.json(null);
+      }
+    } catch {
+      res.json(null);
+    }
+  });
+
   r.use(requireUser);
 
   r.get('/book', async (_req, res) => {

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { Loading, LoadError, PageHeader, useAsync } from '../ui.jsx';
 
@@ -9,8 +10,15 @@ export default function Book() {
     <article className="narrow">
       <PageHeader title={data.title} subtitle={data.authorName ? `by ${data.authorName}` : ''} />
       {data.tagline && <p className="tagline">{data.tagline}</p>}
+
       <h2>About this book</h2>
       {data.synopsis ? <p className="pre-wrap">{data.synopsis}</p> : <p className="muted">The author has not added a description yet.</p>}
+
+      <div className="row gap-2 mt-2 mb-3">
+        <Link to="/about" className="btn btn-secondary btn-small">Read Full Author Story →</Link>
+        <Link to="/" className="btn btn-ghost btn-small">Visit Storefront</Link>
+      </div>
+
       <h2>How to review</h2>
       <ol>
         <li>Open a chapter from the chapter list and read it at your own pace.</li>
