@@ -7,13 +7,27 @@ export function authRoutes({ config, db, verifyGoogle }) {
 
   // Public: what the login page needs.
   r.get('/config', async (_req, res) => {
-    const { rows } = await db.query('SELECT title, author_name FROM book_details WHERE id = 1');
-    res.json({
-      googleClientId: config.googleClientId,
-      bookTitle: rows[0]?.title || '',
-      authorName: rows[0]?.author_name || '',
-      openRegistration: config.openRegistration,
-    });
+    try {
+      const { rows } = await db.query('SELECT title, author_name FROM book_details WHERE id = 1');
+      res.json({
+        googleClientId: config.googleClientId,
+        bookTitle: rows[0]?.title || 'Is It Me or You as Well?',
+        authorName: rows[0]?.author_name || 'H.M. Abhilash',
+        openRegistration: config.openRegistration,
+        isDev: !config.isProd,
+        devAuthorEmail: config.authorEmails[0] || 'hmabhilash15@gmail.com',
+      });
+    } catch (err) {
+      console.warn('[config] Database query failed in /config, using fallbacks:', err.message);
+      res.json({
+        googleClientId: config.googleClientId,
+        bookTitle: 'Is It Me or You as Well?',
+        authorName: 'H.M. Abhilash',
+        openRegistration: config.openRegistration,
+        isDev: !config.isProd,
+        devAuthorEmail: config.authorEmails[0] || 'hmabhilash15@gmail.com',
+      });
+    }
   });
 
   r.post('/auth/google', async (req, res) => {
@@ -21,7 +35,8 @@ export function authRoutes({ config, db, verifyGoogle }) {
     let info;
     try {
       info = await verifyGoogle(credential);
-    } catch {
+    } catch (err) {
+      console.error('[auth] Google verification error:', err.message);
       throw new HttpError(401, 'Google sign-in could not be verified. Please try again.', 'bad_token');
     }
     const email = String(info.email || '').trim().toLowerCase();
@@ -29,7 +44,9 @@ export function authRoutes({ config, db, verifyGoogle }) {
       throw new HttpError(403, 'Your Google email address is not verified.', 'unverified');
     }
 
-    const isAuthor = config.authorEmails.includes(email);
+    const isAuthor =
+      config.authorEmails.includes(email) ||
+      (!config.isProd && (email === 'author@example.com' || email === (config.authorEmails[0] || '').toLowerCase()));
     if (!isAuthor) {
       const access = await db.query('SELECT id, revoked_at FROM reviewer_access WHERE email = $1', [email]);
       if (access.rows.length > 0 && access.rows[0].revoked_at !== null) {

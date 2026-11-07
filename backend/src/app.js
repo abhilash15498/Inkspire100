@@ -43,7 +43,15 @@ export function createApp({ config, db, storage, verifyGoogle }) {
     app.use(
       '/api',
       cors({
-        origin: config.allowedOrigins,
+        origin: (origin, callback) => {
+          if (!origin) return callback(null, true);
+          const clean = origin.replace(/\/$/, '');
+          if (config.allowedOrigins.includes(clean)) return callback(null, true);
+          if (!config.isProd && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(clean)) {
+            return callback(null, true);
+          }
+          callback(null, false);
+        },
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
         allowedHeaders: ['Content-Type', 'X-Requested-With'],
