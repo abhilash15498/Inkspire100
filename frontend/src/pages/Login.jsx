@@ -57,8 +57,8 @@ export default function Login() {
     const authorName = config?.authorName || 'H.M. Abhilash';
     const cred =
       role === 'author'
-        ? { email: authorEmail, sub: 'dev-author-id', name: `${authorName} (Author)` }
-        : { email: 'reviewer@example.com', sub: 'dev-reviewer-id', name: 'Alice Reviewer (Beta)' };
+        ? { email: authorEmail, sub: 'dev-author-id', name: `${authorName} (Author)`, emailVerified: true }
+        : { email: 'reviewer@example.com', sub: 'dev-reviewer-id', name: 'Alice Reviewer (Beta)', emailVerified: true };
     try {
       const loggedUser = await login(JSON.stringify(cred));
       const dest = from === '/' || from === '/login' ? (loggedUser.role === 'author' ? '/author' : '/chapters') : from;

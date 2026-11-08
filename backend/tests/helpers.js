@@ -35,7 +35,7 @@ const fakeVerify = async (cred) => {
   } catch {
     throw new Error('bad token');
   }
-  return { sub: p.sub, email: p.email, emailVerified: p.emailVerified, name: p.name };
+  return { sub: p.sub, email: p.email, emailVerified: p.emailVerified !== false, name: p.name };
 };
 
 export async function startTestServer(overrides = {}) {
