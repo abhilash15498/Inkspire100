@@ -21,8 +21,20 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  const login = useCallback(async (credential) => {
+  const loginWithGoogle = useCallback(async (credential) => {
     const d = await api.post('/auth/google', { credential });
+    setUser(d.user);
+    return d.user;
+  }, []);
+
+  const loginWithPassword = useCallback(async (email, password) => {
+    const d = await api.post('/auth/login', { email, password });
+    setUser(d.user);
+    return d.user;
+  }, []);
+
+  const registerWithPassword = useCallback(async (name, email, password) => {
+    const d = await api.post('/auth/register', { name, email, password });
     setUser(d.user);
     return d.user;
   }, []);
@@ -35,6 +47,19 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const value = useMemo(() => ({ user, loading, login, logout, isAuthor: user?.role === 'author' }), [user, loading, login, logout]);
+  const value = useMemo(
+    () => ({
+      user,
+      loading,
+      login: loginWithGoogle, // backward-compatibility
+      loginWithGoogle,
+      loginWithPassword,
+      registerWithPassword,
+      logout,
+      isAuthor: user?.role === 'author',
+    }),
+    [user, loading, loginWithGoogle, loginWithPassword, registerWithPassword, logout],
+  );
+
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

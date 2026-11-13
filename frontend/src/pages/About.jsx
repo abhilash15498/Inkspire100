@@ -77,13 +77,13 @@ export default function About() {
 
           <div className="about-cta-box">
             <h3>Ready to Experience the Story?</h3>
-            <p>Read sample chapters on the storefront, pre-order the collector's edition, or sign in to your reviewer library.</p>
+            <p>Read sample chapters on the storefront, unlock full access for ₹30, or sign in to your reader library.</p>
             <div className="row">
               <Link to="/" className="btn btn-primary">Visit Storefront</Link>
               {user ? (
                 <Link to="/chapters" className="btn">Open Chapter Library</Link>
               ) : (
-                <Link to="/login" className="btn">Reviewer Sign In</Link>
+                <Link to="/login" className="btn">Sign In / Register</Link>
               )}
             </div>
           </div>

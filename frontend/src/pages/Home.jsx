@@ -28,64 +28,25 @@ export default function Home() {
     synopsis: '',
   };
 
-  const editions = [
-    {
-      id: 'digital',
-      name: 'Digital Early Access Edition',
-      tag: 'Instant Access',
-      badge: null,
-      price: '₹199',
-      originalPrice: '₹349',
-      description: 'Immediate online access to the full novel manuscript via our distraction-free paged paperback reader.',
-      features: [
-        'Instant web reader access on mobile, tablet & laptop',
-        'Physical book proportions with Paper, Sepia & Night themes',
-        'Custom font typography (Literata, Lora, Garamond)',
-        'Automatic reading progress & bookmark sync',
-        'Access to ongoing author revisions & updates',
-      ],
-      isPhysical: false,
-      cta: 'Pre-Order Digital (₹199)',
-    },
-    {
-      id: 'paperback',
-      name: 'Collector’s Paperback Edition',
-      tag: 'Best Seller',
-      badge: 'MOST POPULAR',
-      price: '₹399',
-      originalPrice: '₹599',
-      description: 'The physical novel in 5.5" × 8.5" Statement trim, printed on 80 GSM cream-wove book paper with author signature.',
-      features: [
-        'Premium 5.5" × 8.5" physical Statement paperback',
-        'High-bulk 80 GSM cream book paper & velvet matte cover',
-        'Signed author bookplate + exclusive custom bookmark',
-        'FREE Instant Digital Web Reader access included',
-        'Free doorstep shipping across India',
-      ],
-      isPhysical: true,
-      cta: 'Pre-Order Paperback (₹399)',
-    },
-    {
-      id: 'patron',
-      name: 'Patron & Founder’s Edition',
-      tag: 'Limited 50 Copies',
-      badge: 'LIMITED COLLECTOR',
-      price: '₹699',
-      originalPrice: '₹999',
-      description: 'For dedicated readers who want to support the novel and have their name permanently immortalized in print.',
-      features: [
-        'Signed physical paperback with personal handwritten dedication',
-        'Your name printed in the Official Book Acknowledgments',
-        'Lifetime digital access + future bonus chapters & deleted scenes',
-        'Exclusive invitation to author digital Q&A sessions',
-        'Priority dispatch with deluxe collector packaging',
-      ],
-      isPhysical: true,
-      cta: 'Pre-Order Patron Edition (₹699)',
-    },
-  ];
+  const digitalAccess = {
+    id: 'digital',
+    name: 'Digital Novel Access',
+    tag: 'Instant Access',
+    price: '₹30',
+    originalPrice: '₹99',
+    description: 'Immediate online access to the full novel manuscript via our distraction-free paged paperback reader.',
+    features: [
+      'Instant web reader access on mobile, tablet & laptop',
+      'Physical book proportions with Paper, Sepia & Night themes',
+      'Custom font typography (Literata, Lora, Garamond)',
+      'Automatic reading progress & bookmark sync',
+      'Access to ongoing author revisions & updates',
+    ],
+    isPhysical: false,
+    cta: 'Get Full Access · ₹30',
+  };
 
-  const openCheckout = (edition) => {
+  const openCheckout = (edition = digitalAccess) => {
     setSelectedEdition(edition);
     setOrderComplete(null);
     setModalOpen(true);
@@ -96,8 +57,8 @@ export default function Home() {
     const orderId = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
     const orderDetails = {
       orderId,
-      edition: selectedEdition.name,
-      price: selectedEdition.price,
+      edition: selectedEdition?.name || digitalAccess.name,
+      price: selectedEdition?.price || digitalAccess.price,
       customer: orderForm,
       date: new Date().toISOString(),
     };
@@ -117,9 +78,9 @@ export default function Home() {
     <div className="storefront-page">
       {/* Top Pre-Order Notification Bar */}
       <aside className="store-top-banner">
-        <span className="banner-pill">EARLY PRE-ORDER</span>
+        <span className="banner-pill">EARLY ACCESS</span>
         <span>
-          Reserve your copy of <strong>{b.title}</strong> · Free instant digital reader access with all paperback editions.
+          Read <strong>{b.title}</strong> online · Full digital access for just <strong>₹30</strong>
         </span>
       </aside>
 
@@ -141,19 +102,12 @@ export default function Home() {
                 'A candid, nostalgic story of middle-class dreams, parental expectations, late-night tea stalls, and navigating life one awkward chapter at a time.'}
             </p>
 
-            <div className="social-proof-strip">
-              <div className="stars">★★★★★</div>
-              <span className="rating-text"><strong>4.9 / 5</strong> from early beta readers</span>
-              <span className="dot-sep">·</span>
-              <span className="hospete-tag">Hospete, 2007</span>
-            </div>
-
             <div className="hero-cta-group">
               <button
                 className="btn btn-primary btn-large cta-pulse"
-                onClick={() => openCheckout(editions[1])}
+                onClick={() => openCheckout(digitalAccess)}
               >
-                Pre-Order Now · ₹399
+                Read Full Novel · ₹30
               </button>
 
               <a href="#sample-preview" className="btn btn-secondary btn-large">
@@ -166,7 +120,7 @@ export default function Home() {
                 </Link>
               ) : (
                 <Link to="/login" className="btn btn-ghost btn-large">
-                  Reviewer Login
+                  Sign in / Register
                 </Link>
               )}
             </div>
@@ -183,8 +137,8 @@ export default function Home() {
               <div className="trust-item">
                 <span className="trust-icon">📖</span>
                 <div>
-                  <strong>5.5" × 8.5" Paperback</strong>
-                  <p className="muted small">Cream book paper w/ bookmark</p>
+                  <strong>Complete Novel</strong>
+                  <p className="muted small">All chapters unlocked</p>
                 </div>
               </div>
               <div className="trust-item">
@@ -265,60 +219,12 @@ export default function Home() {
           <div className="sample-paperback-footer">
             <div className="sample-footer-fade"></div>
             <div className="sample-footer-actions">
-              <p className="muted small">Liked the opening? Unlock all chapters with full digital or paperback access.</p>
-              <button className="btn btn-primary" onClick={() => openCheckout(editions[0])}>
-                Unlock Full Manuscript (From ₹199)
+              <p className="muted small">Liked the opening? Unlock all chapters online for just ₹30.</p>
+              <button className="btn btn-primary" onClick={() => openCheckout(digitalAccess)}>
+                Unlock Full Novel · ₹30
               </button>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Editions & Pricing Section */}
-      <section id="editions" className="section-editions">
-        <div className="section-head text-center">
-          <span className="eyebrow">Choose Your Edition</span>
-          <h2>Pre-Order & Reading Options</h2>
-          <p className="muted">Direct from the author. All paperback editions include free instant web reader access.</p>
-        </div>
-
-        <div className="editions-grid">
-          {editions.map((ed) => (
-            <div key={ed.id} className={`edition-card ${ed.badge ? 'featured-edition' : ''}`}>
-              {ed.badge && <div className="edition-badge-tag">{ed.badge}</div>}
-              <div className="edition-top">
-                <span className="edition-tag">{ed.tag}</span>
-                <h3 className="edition-title">{ed.name}</h3>
-                <div className="price-row">
-                  <span className="price-current">{ed.price}</span>
-                  <span className="price-original">{ed.originalPrice}</span>
-                  <span className="price-save">SAVE {ed.id === 'digital' ? '43%' : ed.id === 'paperback' ? '33%' : '30%'}</span>
-                </div>
-                <p className="edition-desc">{ed.description}</p>
-              </div>
-
-              <ul className="edition-features-list">
-                {ed.features.map((feat, idx) => (
-                  <li key={idx}>
-                    <span className="feat-check">✓</span>
-                    <span>{feat}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <div className="edition-bottom">
-                <button
-                  className={`btn ${ed.badge ? 'btn-primary' : 'btn-outline'} btn-block`}
-                  onClick={() => openCheckout(ed)}
-                >
-                  {ed.cta}
-                </button>
-                <p className="small muted text-center mt-2">
-                  {ed.isPhysical ? '📦 Dispatches on print release · Free shipping in India' : '⚡ Instant digital access'}
-                </p>
-              </div>
-            </div>
-          ))}
         </div>
       </section>
 
@@ -354,59 +260,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Reader Praise / Testimonials */}
-      <section className="section-reviews">
-        <div className="section-head text-center">
-          <span className="eyebrow">Reader Praise</span>
-          <h2>What Early Readers Are Saying</h2>
-          <p className="muted">Direct feedback from our private beta reviewer community.</p>
-        </div>
-
-        <div className="reviews-grid">
-          <div className="review-card">
-            <div className="review-stars">★★★★★</div>
-            <p className="review-quote">
-              “Brutally honest, hilarious, and deeply relatable. The Hospete hospital opening hooked me immediately, and the college student dilemma felt like my own diary.”
-            </p>
-            <div className="reviewer-info">
-              <div className="reviewer-avatar">RK</div>
-              <div>
-                <strong>Rahul K.</strong>
-                <span className="muted small">Beta Reviewer · Bengaluru</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="review-card">
-            <div className="review-stars">★★★★★</div>
-            <p className="review-quote">
-              “Finally an Indian novel that doesn’t pretend everyone is a tech billionaire or movie hero. The paperback paged layout in the reader makes reading it pure joy.”
-            </p>
-            <div className="reviewer-info">
-              <div className="reviewer-avatar">PS</div>
-              <div>
-                <strong>Pooja S.</strong>
-                <span className="muted small">Beta Reviewer · Pune</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="review-card">
-            <div className="review-stars">★★★★★</div>
-            <p className="review-quote">
-              “The balance between humorous self-deprecation and poignant emotional questions is spot-on. Can’t wait to have the physical signed paperback on my bookshelf!”
-            </p>
-            <div className="reviewer-info">
-              <div className="reviewer-avatar">AM</div>
-              <div>
-                <strong>Anand M.</strong>
-                <span className="muted small">Beta Reviewer · Hyderabad</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Author Spotlight */}
       <section className="section-author-spotlight">
         <div className="author-spotlight-box">
@@ -438,24 +291,24 @@ export default function Home() {
         <div className="faq-list">
           {[
             {
-              q: 'How do I access the digital reader after pre-ordering?',
-              a: 'Digital access is instantaneous! Once your pre-order is confirmed, simply sign in with your Google account on this website to unlock all published chapters and reading customization settings.',
+              q: 'How do I access the digital reader after purchasing?',
+              a: 'Digital access is instantaneous! Once confirmed, you can sign in with your email or Google account on this website to read all published chapters in our paged paperback reader.',
             },
             {
-              q: 'When will the physical Collector’s Paperback be delivered?',
-              a: 'Physical paperbacks are scheduled for delivery upon book production. Deliveries across India take 4–7 business days with end-to-end tracking provided to your email.',
+              q: 'What is the price of the novel?',
+              a: 'Right now, complete digital access to read the novel online is available for just ₹30 directly on this website.',
             },
             {
               q: 'I am an invited beta reviewer. Do I have to pay?',
-              a: 'No! If the author invited you as an early reviewer, your reading and feedback access is completely free. Simply click "Reviewer Login" at the top to sign in with your invited Google email.',
+              a: 'No! If you have been invited by the author as an early beta reviewer, your reading and feedback access is completely free. Simply click "Sign in / Register" at the top to sign in with your invited email.',
             },
             {
               q: 'What payment methods do you accept?',
-              a: 'When payment gateways go live, we support UPI (Google Pay, PhonePe, Paytm), Credit & Debit Cards (Visa, Mastercard, RuPay), NetBanking, and major digital wallets through 256-bit encrypted gateways like Razorpay and Stripe.',
+              a: 'We support UPI (Google Pay, PhonePe, Paytm, BHIM), Credit & Debit Cards (Visa, Mastercard, RuPay), and NetBanking through secure payment channels.',
             },
             {
-              q: 'What is your refund and cancellation policy?',
-              a: 'You can cancel any physical paperback pre-order anytime before dispatch for a 100% full refund. For damaged copies upon delivery, we immediately dispatch a brand-new replacement at zero cost. See our Terms of Service for full details.',
+              q: 'Can I read on my mobile phone or tablet?',
+              a: 'Yes! The reader is designed with responsive book proportions, tap-to-turn pages, custom typography (Literata, Garamond, Lora), and Sepia/Night themes for comfortable reading on any screen.',
             },
           ].map((item, idx) => (
             <div key={idx} className={`faq-item ${faqOpen[idx] ? 'open' : ''}`}>
@@ -473,10 +326,10 @@ export default function Home() {
       <section className="section-bottom-cta">
         <div className="bottom-cta-inner text-center">
           <h2>Begin Reading <em>{b.title}</em> Today</h2>
-          <p className="muted">Reserve your signed collector’s edition or unlock digital early access right now.</p>
+          <p className="muted">Unlock complete digital reading access for just ₹30 directly on this website.</p>
           <div className="row justify-center gap-3 mt-3">
-            <button className="btn btn-primary btn-large" onClick={() => openCheckout(editions[1])}>
-              Pre-Order Collector’s Edition · ₹399
+            <button className="btn btn-primary btn-large" onClick={() => openCheckout(digitalAccess)}>
+              Get Full Access · ₹30
             </button>
             <Link to="/about" className="btn btn-secondary btn-large">
               Learn About the Author
@@ -494,11 +347,11 @@ export default function Home() {
             {!orderComplete ? (
               <>
                 <div className="modal-header">
-                  <span className="eyebrow">Secure Pre-Order Checkout</span>
-                  <h2>{selectedEdition?.name}</h2>
+                  <span className="eyebrow">Instant Digital Access</span>
+                  <h2>{selectedEdition?.name || 'Digital Novel Access'}</h2>
                   <div className="modal-price-badge">
-                    <span>Total Amount: <strong>{selectedEdition?.price}</strong></span>
-                    <span className="tax-tag">Taxes & Shipping included</span>
+                    <span>Total Amount: <strong>₹30</strong></span>
+                    <span className="tax-tag">Taxes included · Immediate online access</span>
                   </div>
                 </div>
 
@@ -530,7 +383,7 @@ export default function Home() {
                     </div>
 
                     <div className="form-group flex-1">
-                      <label htmlFor="ord-phone">Phone Number (for Delivery / SMS)</label>
+                      <label htmlFor="ord-phone">Phone Number (Optional)</label>
                       <input
                         id="ord-phone"
                         type="tel"
@@ -540,20 +393,6 @@ export default function Home() {
                       />
                     </div>
                   </div>
-
-                  {selectedEdition?.isPhysical && (
-                    <div className="form-group">
-                      <label htmlFor="ord-addr">Shipping Address (India) *</label>
-                      <textarea
-                        id="ord-addr"
-                        rows="2"
-                        required
-                        placeholder="House / Flat No, Street, Landmark, City, State, PIN Code"
-                        value={orderForm.address}
-                        onChange={(e) => setOrderForm({ ...orderForm, address: e.target.value })}
-                      ></textarea>
-                    </div>
-                  )}
 
                   <div className="form-group">
                     <label>Preferred Payment Gateway</label>
@@ -566,7 +405,7 @@ export default function Home() {
                           checked={orderForm.paymentMethod === 'upi'}
                           onChange={() => setOrderForm({ ...orderForm, paymentMethod: 'upi' })}
                         />
-                        <span>⚡ UPI (GPay / PhonePe / Paytm)</span>
+                        <span>⚡ UPI (GPay / PhonePe / Paytm / BHIM)</span>
                       </label>
                       <label className={`pay-method-pill ${orderForm.paymentMethod === 'card' ? 'selected' : ''}`}>
                         <input
@@ -583,7 +422,7 @@ export default function Home() {
 
                   <div className="checkout-trust-box">
                     <p className="micro muted">
-                      🔒 256-Bit SSL Encrypted Pre-order reservation. By proceeding, you agree to our{' '}
+                      🔒 256-Bit SSL Encrypted checkout. By proceeding, you agree to our{' '}
                       <Link to="/privacy" target="_blank">Privacy Policy</Link> and{' '}
                       <Link to="/terms" target="_blank">Terms of Service</Link>.
                     </p>
@@ -591,7 +430,7 @@ export default function Home() {
 
                   <div className="modal-actions">
                     <button type="submit" className="btn btn-primary btn-block btn-large">
-                      Confirm Reservation · {selectedEdition?.price}
+                      Confirm & Get Access · ₹30
                     </button>
                   </div>
                 </form>
@@ -599,11 +438,11 @@ export default function Home() {
             ) : (
               <div className="order-success-view text-center">
                 <div className="success-icon-badge">✓</div>
-                <h2>Pre-Order Reserved!</h2>
-                <p className="order-id-label">Reservation ID: <strong>{orderComplete.orderId}</strong></p>
+                <h2>Access Confirmed!</h2>
+                <p className="order-id-label">Access ID: <strong>{orderComplete.orderId}</strong></p>
                 <p className="success-message">
-                  Thank you, <strong>{orderComplete.customer.name}</strong>! Your reservation for{' '}
-                  <strong>{orderComplete.edition}</strong> has been recorded.
+                  Thank you, <strong>{orderComplete.customer.name}</strong>! Your access to{' '}
+                  <strong>{orderComplete.edition}</strong> has been registered.
                 </p>
                 <div className="order-summary-box">
                   <div className="summary-row">
@@ -612,7 +451,7 @@ export default function Home() {
                   </div>
                   <div className="summary-row">
                     <span>Amount:</span>
-                    <strong>{orderComplete.price}</strong>
+                    <strong>₹30</strong>
                   </div>
                   <div className="summary-row">
                     <span>Linked Email:</span>
@@ -620,12 +459,12 @@ export default function Home() {
                   </div>
                   <div className="summary-row">
                     <span>Payment Gateway:</span>
-                    <span>{orderComplete.customer.paymentMethod.toUpperCase()} (Pre-Order Ready)</span>
+                    <span>{orderComplete.customer.paymentMethod.toUpperCase()} (Online Access Active)</span>
                   </div>
                 </div>
 
                 <p className="small muted mt-3">
-                  A confirmation email has been dispatched. You can now access sample chapters or sign in as a reviewer.
+                  You can now sign in using your email to read all published chapters in the online reader.
                 </p>
 
                 <div className="row justify-center gap-2 mt-4">

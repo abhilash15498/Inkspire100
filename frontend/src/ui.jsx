@@ -137,21 +137,35 @@ export function Layout() {
       </a>
       <header className="site-header">
         <div className="site-header-inner">
-          <Link to="/" className="brand">
+          <Link to={isAuthor ? '/author' : '/'} className="brand">
             {bookTitle || 'Is It Me or You as Well?'}
           </Link>
-          <nav aria-label="Main">
-            <NavLink to="/" end>
-              Store
-            </NavLink>
-            <NavLink to="/about">About the Author</NavLink>
-            <NavLink to="/chapters">Reader</NavLink>
-            {user && <NavLink to="/feedback">My Feedback</NavLink>}
-            {isAuthor && <NavLink to="/author">Author Panel</NavLink>}
+          <nav aria-label={isAuthor ? 'Author Navigation' : 'Reader Navigation'}>
+            {isAuthor ? (
+              <>
+                <NavLink to="/author" end>
+                  Chapters & Editor
+                </NavLink>
+                <NavLink to="/author/feedback">Feedback Inbox</NavLink>
+                <NavLink to="/author/reviewers">Reviewers</NavLink>
+                <NavLink to="/author/book">Book Details</NavLink>
+                <NavLink to="/chapters">Preview Reader</NavLink>
+              </>
+            ) : (
+              <>
+                <NavLink to="/" end>
+                  Store
+                </NavLink>
+                <NavLink to="/about">About the Novel</NavLink>
+                <NavLink to="/chapters">Reader</NavLink>
+                {user && <NavLink to="/feedback">My Feedback</NavLink>}
+              </>
+            )}
           </nav>
           <div className="who">
             {user ? (
               <>
+                {isAuthor && <span className="chip chip-accent">Author</span>}
                 <span className="muted who-name" title={user?.name || user?.email}>
                   {user?.name || user?.email}
                 </span>
@@ -161,7 +175,7 @@ export function Layout() {
               </>
             ) : (
               <Link to="/login" className="btn btn-small btn-primary">
-                Reviewer Sign in
+                Sign in
               </Link>
             )}
           </div>
@@ -170,75 +184,69 @@ export function Layout() {
       <main id="main" className="container">
         <Outlet />
       </main>
-      <footer className="store-footer">
-        <div className="store-footer-inner">
-          <div className="footer-col brand-col">
-            <h3 className="footer-brand">{bookTitle || 'Is It Me or You as Well?'}</h3>
-            <p className="footer-desc">
-              A candid coming-of-age novel following an ordinary Indian boy navigating dreams, family expectations, and awkward heartbreaks.
-            </p>
-            <div className="footer-badges">
-              <span className="badge-pill">🔒 256-bit Secure Checkout</span>
-              <span className="badge-pill">⚡ Instant Digital Access</span>
+      {isAuthor ? (
+        <footer className="site-footer">
+          <p className="muted small">Author Workspace · {bookTitle || 'Is It Me or You as Well?'}</p>
+        </footer>
+      ) : (
+        <footer className="store-footer">
+          <div className="store-footer-inner">
+            <div className="footer-col brand-col">
+              <h3 className="footer-brand">{bookTitle || 'Is It Me or You as Well?'}</h3>
+              <p className="footer-desc">
+                A candid coming-of-age novel following an ordinary Indian boy navigating dreams, family expectations, and awkward heartbreaks.
+              </p>
+              <div className="footer-badges">
+                <span className="badge-pill">🔒 256-bit Secure Checkout</span>
+                <span className="badge-pill">⚡ Instant Digital Access</span>
+              </div>
+            </div>
+            <div className="footer-col">
+              <h4>Explore</h4>
+              <ul className="plain-list footer-links">
+                <li><Link to="/">Book Storefront</Link></li>
+                <li><Link to="/about">About the Author & Story</Link></li>
+                <li><Link to="/chapters">Online Manuscript Reader</Link></li>
+                {user && <li><Link to="/feedback">My Feedback</Link></li>}
+              </ul>
+            </div>
+            <div className="footer-col">
+              <h4>Legal & Policies</h4>
+              <ul className="plain-list footer-links">
+                <li><Link to="/privacy">Privacy Policy</Link></li>
+                <li><Link to="/terms">Terms of Service & Refunds</Link></li>
+                <li><Link to="/login">Reader Sign-in</Link></li>
+                <li><a href="mailto:hmabhilash15@gmail.com">Contact Support</a></li>
+              </ul>
+            </div>
+            <div className="footer-col">
+              <h4>Monetization & Payments</h4>
+              <p className="footer-subtext">Supported Payment Gateways:</p>
+              <div className="payment-badges-row">
+                <span className="pay-chip">UPI</span>
+                <span className="pay-chip">GPay</span>
+                <span className="pay-chip">PhonePe</span>
+                <span className="pay-chip">Visa</span>
+                <span className="pay-chip">Mastercard</span>
+                <span className="pay-chip">RuPay</span>
+              </div>
+              <p className="footer-disclaimer">
+                Author contact: <a href="mailto:hmabhilash15@gmail.com">hmabhilash15@gmail.com</a>
+              </p>
             </div>
           </div>
-          <div className="footer-col">
-            <h4>Explore</h4>
-            <ul className="plain-list footer-links">
-              <li><Link to="/">Book Storefront</Link></li>
-              <li><Link to="/about">About the Author & Story</Link></li>
-              <li><Link to="/chapters">Online Manuscript Reader</Link></li>
-              {user && <li><Link to="/feedback">My Feedback</Link></li>}
-            </ul>
-          </div>
-          <div className="footer-col">
-            <h4>Legal & Policies</h4>
-            <ul className="plain-list footer-links">
-              <li><Link to="/privacy">Privacy Policy</Link></li>
-              <li><Link to="/terms">Terms of Service & Refunds</Link></li>
-              <li><Link to="/login">Beta Reviewer Sign-in</Link></li>
-              <li><a href="mailto:hmabhilash15@gmail.com">Contact Support</a></li>
-            </ul>
-          </div>
-          <div className="footer-col">
-            <h4>Monetization & Payments</h4>
-            <p className="footer-subtext">Supported Payment Gateways:</p>
-            <div className="payment-badges-row">
-              <span className="pay-chip">UPI</span>
-              <span className="pay-chip">GPay</span>
-              <span className="pay-chip">PhonePe</span>
-              <span className="pay-chip">Visa</span>
-              <span className="pay-chip">Mastercard</span>
-              <span className="pay-chip">RuPay</span>
-            </div>
-            <p className="footer-disclaimer">
-              Author contact: <a href="mailto:hmabhilash15@gmail.com">hmabhilash15@gmail.com</a>
+          <div className="footer-bottom">
+            <p>© {new Date().getFullYear()} {bookTitle || 'Is It Me or You as Well?'}. All rights reserved.</p>
+            <p className="footer-fineprint">
+              Physical book format: 5.5" × 8.5" Statement Paperback. Private manuscript rights protected under international copyright law.
             </p>
           </div>
-        </div>
-        <div className="footer-bottom">
-          <p>© {new Date().getFullYear()} {bookTitle || 'Is It Me or You as Well?'}. All rights reserved.</p>
-          <p className="footer-fineprint">
-            Physical book format: 5.5" × 8.5" Statement Paperback. Private manuscript rights protected under international copyright law.
-          </p>
-        </div>
-      </footer>
+        </footer>
+      )}
     </>
   );
 }
 
 export function AuthorLayout() {
-  return (
-    <>
-      <nav className="subnav" aria-label="Author">
-        <NavLink to="/author" end>
-          Chapters
-        </NavLink>
-        <NavLink to="/author/feedback">Feedback inbox</NavLink>
-        <NavLink to="/author/reviewers">Reviewers</NavLink>
-        <NavLink to="/author/book">Book details</NavLink>
-      </nav>
-      <Outlet />
-    </>
-  );
+  return <Outlet />;
 }

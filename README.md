@@ -159,17 +159,15 @@ Click *Sign in with Google* using the email you put in `AUTHOR_EMAILS`. You are 
 
 ## 11. E-Commerce Storefront, Monetization & Legal Compliance
 
-When preparing for monetization (eBook sales, physical print orders, pre-orders, and payment gateways), the platform features a complete public-facing storefront alongside the private manuscript reader:
+When preparing for monetization and reader access, the platform features a complete public-facing storefront alongside the private manuscript reader:
 
 * **E-Commerce Storefront (`/`)**:
   - **Realistic 3D Book Presentation**: CSS-modeled 3D physical book cover with realistic spine depth, shadows, and Statement paperback dimensions.
   - **Interactive "Look Inside" Preview**: Visitors can read the opening Prologue directly on the landing page in authentic paperback typesetting.
-  - **3 Purchase & Pre-Order Tiers**:
-    1. *Digital Early Access Edition (₹199)*: Immediate online access to the paged web reader, themes, and ongoing author updates.
-    2. *Collector's Signed Paperback (₹399)*: Physical 5.5" × 8.5" book on 80 GSM cream paper, author signature, custom bookmark, plus complimentary instant digital reader access.
-    3. *Patron & Founder's Edition (₹699)*: Signed copy with a personalized handwritten dedication and the reader's name credited in the official book Acknowledgments.
-  - **Pre-Order Checkout Modal**: Customer details form, shipping address capture for paperbacks, and gateway selection (UPI, Google Pay, PhonePe, Cards, NetBanking) with order reservation receipt generation.
-  - **Reader Praise & FAQ**: Testimonial quotes from beta reviewers and an accordion answering common questions about access, delivery, beta reviewer access, and payments.
+  - **Digital Novel Access (₹30)**: Direct online access to read the complete novel in our distraction-free paged paperback reader on any mobile, tablet, or desktop device.
+  - **Checkout Modal**: Clean customer details form (name, email) and payment gateway selection (UPI, Google Pay, PhonePe, Paytm, Cards, NetBanking) with immediate access registration.
+  - **Honest Reviews Post-Deployment**: Placeholder reviews have been completely removed; real reader praise and reviews will be displayed organically post-launch.
+  - **FAQ**: Answers common questions about ₹30 access, invited beta reviewer access, payments, and responsive reading formats.
 
 * **About the Novel & Author (`/about`)**:
   - The story behind *Is It Me or You as Well?*, from Hospete 2007 to college years.
@@ -177,12 +175,14 @@ When preparing for monetization (eBook sales, physical print orders, pre-orders,
   - Author biography (H.M. Abhilash), creative process, and literary inquiry contact details.
 
 * **Legal Compliance for Payment Gateways (`/privacy` & `/terms`)**:
-  - **Privacy Policy**: Covers Google OAuth, cookies/sessions, user feedback storage, DPDP Act 2023 compliance, and Grievance Officer details.
-  - **Terms of Service & Refund Policy**: Explicit intellectual property copyright protection, digital license terms, physical book shipping timelines (4–7 business days in India), cancellation and replacement policies for payment processors (Razorpay, Stripe, PayU, LemonSqueezy).
+  - **Privacy Policy**: Covers authentication (Email/Password & Google OAuth), cookies/sessions, user feedback storage, DPDP Act 2023 compliance, and Grievance Officer details.
+  - **Terms of Service & Refund Policy**: Explicit intellectual property copyright protection, digital license terms, cancellation and replacement policies for payment processors (Razorpay, Stripe, PayU, LemonSqueezy).
 
-* **Route Architecture**:
-  - Public visitors can browse the Store, About page, Sample chapter, Privacy Policy, and Terms freely without sign-in.
-  - The Chapter Library (`/chapters`), Paged Reader (`/chapters/:id`), and Author Panel (`/author`) remain strictly protected via Google OAuth. Invited beta reviewers continue reading and leaving feedback for free.
+* **Authentication & Role System**:
+  - Supports both **Email & Password** registration/login (salted scrypt hashing) and **Google OAuth**.
+  - **Automatic Role Assignment**: Any email listed in `AUTHOR_EMAILS` automatically receives the Author role; any other user is assigned the Reader (reviewer) role.
+  - **Author Role View Isolation**: When logged in as the author, the top navigation exclusively displays Author tools (`Chapters & Editor`, `Feedback Inbox`, `Reviewers`, `Book Details`, `Preview Reader`), cleanly hiding storefront links.
+  - Public visitors can browse the Store, About page, Sample chapter, Privacy Policy, and Terms freely without sign-in. Invited beta reviewers continue reading and leaving feedback for free.
 
 ## 12. Put it online (free-tier route)
 

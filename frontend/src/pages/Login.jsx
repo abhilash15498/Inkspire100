@@ -14,7 +14,7 @@ function loadGoogleScript() {
     s.onload = resolve;
     s.onerror = () => {
       gsiPromise = null;
-      reject(new Error('Could not load Google sign-in script. Check your internet or ad-blocker.'));
+      reject(new Error('Could not load Google sign-in script.'));
     };
     document.head.appendChild(s);
   });
@@ -22,10 +22,15 @@ function loadGoogleScript() {
 }
 
 export default function Login() {
-  const { user, loading, login } = useAuth();
+  const { user, loading, loginWithGoogle, loginWithPassword, registerWithPassword } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [config, setConfig] = useState(null);
+  const [tab, setTab] = useState('login'); // 'login' | 'register'
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const buttonRef = useRef(null);
   const from = location.state?.from || '/';
@@ -34,37 +39,40 @@ export default function Login() {
     api
       .get('/config')
       .then(setConfig)
-      .catch((e) => {
-        // Fallback to local dev config if backend DB is cold-starting
+      .catch(() => {
         setConfig({
-          googleClientId: 'dev-mode',
+          googleClientId: '',
           bookTitle: 'Is It Me or You as Well?',
           authorName: 'H.M. Abhilash',
           openRegistration: true,
-          isDev: true,
-          devAuthorEmail: 'hmabhilash15@gmail.com',
         });
-        setError('Notice: Using local development fallback mode. (' + errMsg(e) + ')');
       });
   }, []);
 
-  const isDevMode = config?.isDev || config?.googleClientId === 'dev-mode' || import.meta.env.DEV;
   const hasGoogle = config?.googleClientId && config.googleClientId !== 'dev-mode';
 
-  const handleDevLogin = async (role) => {
+  const handleAuthSuccess = (loggedUser) => {
+    const defaultDest = loggedUser.role === 'author' ? '/author' : '/chapters';
+    const dest = from === '/' || from === '/login' ? defaultDest : from;
+    navigate(dest, { replace: true });
+  };
+
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
     setError('');
-    const authorEmail = config?.devAuthorEmail || 'hmabhilash15@gmail.com';
-    const authorName = config?.authorName || 'H.M. Abhilash';
-    const cred =
-      role === 'author'
-        ? { email: authorEmail, sub: 'dev-author-id', name: `${authorName} (Author)`, emailVerified: true }
-        : { email: 'reviewer@example.com', sub: 'dev-reviewer-id', name: 'Alice Reviewer (Beta)', emailVerified: true };
+    setSubmitting(true);
     try {
-      const loggedUser = await login(JSON.stringify(cred));
-      const dest = from === '/' || from === '/login' ? (loggedUser.role === 'author' ? '/author' : '/chapters') : from;
-      navigate(dest, { replace: true });
-    } catch (e) {
-      setError(errMsg(e));
+      if (tab === 'register') {
+        const loggedUser = await registerWithPassword(name, email, password);
+        handleAuthSuccess(loggedUser);
+      } else {
+        const loggedUser = await loginWithPassword(email, password);
+        handleAuthSuccess(loggedUser);
+      }
+    } catch (err) {
+      setError(errMsg(err));
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -80,11 +88,10 @@ export default function Login() {
           callback: async (response) => {
             setError('');
             try {
-              const loggedUser = await login(response.credential);
-              const dest = from === '/' || from === '/login' ? (loggedUser.role === 'author' ? '/author' : '/chapters') : from;
-              navigate(dest, { replace: true });
-            } catch (e) {
-              setError(errMsg(e));
+              const loggedUser = await loginWithGoogle(response.credential);
+              handleAuthSuccess(loggedUser);
+            } catch (err) {
+              setError(errMsg(err));
             }
           },
         });
@@ -93,23 +100,17 @@ export default function Login() {
           size: 'large',
           shape: 'pill',
           text: 'signin_with',
-          width: 280,
+          width: 300,
         });
       })
-      .catch((e) => {
-        if (!cancelled) {
-          setError(
-            'Google Sign-In is unavailable (' +
-              errMsg(e) +
-              '). If running locally, verify that "http://localhost:5173" is listed in Authorized JavaScript Origins in Google Cloud Console, or use Quick Dev Sign-In below.',
-          );
-        }
+      .catch(() => {
+        /* Google sign-in script blocked or unavailable */
       });
 
     return () => {
       cancelled = true;
     };
-  }, [config, hasGoogle, login, navigate, from]);
+  }, [config, hasGoogle, loginWithGoogle]);
 
   if (!loading && user) {
     const dest = from === '/' || from === '/login' ? (user.role === 'author' ? '/author' : '/chapters') : from;
@@ -118,68 +119,154 @@ export default function Login() {
 
   return (
     <main className="login">
-      <div className="login-card">
-        <p className="eyebrow">{config?.openRegistration ? 'Early Reader Edition' : 'A private reading copy'}</p>
-        <h1 className="display">{config?.bookTitle || 'Is It Me or You as Well?'}</h1>
-        {config?.authorName && <p className="muted">by {config.authorName}</p>}
-        <hr className="scene-break" aria-hidden="true" />
+      <div className="login-card" style={{ maxWidth: '440px', margin: '2rem auto', padding: '2.5rem' }}>
+        <p className="eyebrow">Reader & Reviewer Portal</p>
+        <h1 className="display" style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>
+          {config?.bookTitle || 'Is It Me or You as Well?'}
+        </h1>
+        {config?.authorName && <p className="muted small" style={{ marginBottom: '1.5rem' }}>by {config.authorName}</p>}
 
-        <p>
-          {config?.openRegistration
-            ? 'Sign in to access published chapters, the paperback reader, and leave chapter feedback.'
-            : 'This manuscript is shared with invited readers only. Sign in with the Google account the author invited.'}
-        </p>
-
-        {hasGoogle && (
-          <div style={{ margin: '1.5rem 0', display: 'flex', justifyContent: 'center', minHeight: '44px' }}>
-            <div ref={buttonRef} className="google-button" aria-label="Sign in with Google" />
-          </div>
-        )}
-
-        {isDevMode && (
-          <div
-            className="dev-login-options"
+        {/* Tab switch between Sign In & Register */}
+        <div
+          className="auth-tabs"
+          style={{
+            display: 'flex',
+            borderBottom: '1px solid var(--line)',
+            marginBottom: '1.5rem',
+            gap: '1rem',
+          }}
+        >
+          <button
+            type="button"
+            className={`auth-tab-btn ${tab === 'login' ? 'active' : ''}`}
+            onClick={() => {
+              setTab('login');
+              setError('');
+            }}
             style={{
-              marginTop: hasGoogle ? '1rem' : '1.5rem',
-              paddingTop: hasGoogle ? '1.25rem' : '0',
-              borderTop: hasGoogle ? '1px dashed var(--line)' : 'none',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.75rem',
-              alignItems: 'center',
+              background: 'none',
+              border: 'none',
+              borderBottom: tab === 'login' ? '2px solid var(--accent)' : '2px solid transparent',
+              color: tab === 'login' ? 'var(--text)' : 'var(--muted)',
+              fontWeight: 600,
+              fontSize: '1rem',
+              padding: '0.5rem 0.5rem 0.75rem',
+              cursor: 'pointer',
+              flex: 1,
             }}
           >
-            <p className="small bold" style={{ color: 'var(--accent, #8a3b2a)', margin: 0 }}>
-              ⚡ One-Click Local Sign-In (Local Testing)
-            </p>
-            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => handleDevLogin('author')}
-                style={{ padding: '0.55rem 1.1rem', fontSize: '0.9rem' }}
-              >
-                Sign in as Author ({config?.devAuthorEmail?.split('@')[0] || 'Abhilash'})
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => handleDevLogin('reviewer')}
-                style={{ padding: '0.55rem 1.1rem', fontSize: '0.9rem' }}
-              >
-                Sign in as Reviewer (Alice)
-              </button>
-            </div>
-            <p className="muted micro" style={{ margin: 0, textAlign: 'center' }}>
-              Instant local testing without needing Google Cloud credentials.
-            </p>
-          </div>
-        )}
+            Sign In
+          </button>
+          <button
+            type="button"
+            className={`auth-tab-btn ${tab === 'register' ? 'active' : ''}`}
+            onClick={() => {
+              setTab('register');
+              setError('');
+            }}
+            style={{
+              background: 'none',
+              border: 'none',
+              borderBottom: tab === 'register' ? '2px solid var(--accent)' : '2px solid transparent',
+              color: tab === 'register' ? 'var(--text)' : 'var(--muted)',
+              fontWeight: 600,
+              fontSize: '1rem',
+              padding: '0.5rem 0.5rem 0.75rem',
+              cursor: 'pointer',
+              flex: 1,
+            }}
+          >
+            Create Account
+          </button>
+        </div>
 
         {error && <Notice kind="error">{error}</Notice>}
 
-        <p className="muted small mt-3">
-          Your password is never shared with this site. Only your name and email address are kept for reading access.
+        {/* Email & Password Form */}
+        <form onSubmit={handlePasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {tab === 'register' && (
+            <div className="form-group" style={{ textAlign: 'left' }}>
+              <label htmlFor="auth-name" style={{ display: 'block', fontSize: '0.88rem', fontWeight: 600, marginBottom: '0.3rem' }}>
+                Your Name
+              </label>
+              <input
+                id="auth-name"
+                type="text"
+                required
+                placeholder="e.g. Rahul Sharma"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                style={{ width: '100%', padding: '0.65rem 0.85rem', background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: '6px', color: 'var(--text)', font: 'inherit' }}
+              />
+            </div>
+          )}
+
+          <div className="form-group" style={{ textAlign: 'left' }}>
+            <label htmlFor="auth-email" style={{ display: 'block', fontSize: '0.88rem', fontWeight: 600, marginBottom: '0.3rem' }}>
+              Email Address
+            </label>
+            <input
+              id="auth-email"
+              type="email"
+              required
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              style={{ width: '100%', padding: '0.65rem 0.85rem', background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: '6px', color: 'var(--text)', font: 'inherit' }}
+            />
+          </div>
+
+          <div className="form-group" style={{ textAlign: 'left' }}>
+            <label htmlFor="auth-password" style={{ display: 'block', fontSize: '0.88rem', fontWeight: 600, marginBottom: '0.3rem' }}>
+              Password
+            </label>
+            <input
+              id="auth-password"
+              type="password"
+              required
+              minLength={6}
+              placeholder={tab === 'register' ? 'At least 6 characters' : 'Enter your password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={{ width: '100%', padding: '0.65rem 0.85rem', background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: '6px', color: 'var(--text)', font: 'inherit' }}
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={submitting}
+            style={{ width: '100%', padding: '0.75rem', fontSize: '1rem', marginTop: '0.5rem', fontWeight: 600 }}
+          >
+            {submitting ? 'Please wait…' : tab === 'register' ? 'Create Account & Read' : 'Sign In'}
+          </button>
+        </form>
+
+        {/* Alternative Google Sign-in */}
+        {hasGoogle && (
+          <div style={{ marginTop: '1.75rem' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                margin: '1rem 0',
+                color: 'var(--muted)',
+                fontSize: '0.8rem',
+              }}
+            >
+              <div style={{ flex: 1, height: '1px', background: 'var(--line)' }} />
+              <span style={{ padding: '0 0.8rem' }}>or continue with Google</span>
+              <div style={{ flex: 1, height: '1px', background: 'var(--line)' }} />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'center', minHeight: '44px' }}>
+              <div ref={buttonRef} className="google-button" aria-label="Sign in with Google" />
+            </div>
+          </div>
+        )}
+
+        <p className="muted micro" style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+          Your reading progress and feedback are safely synced to your account.
         </p>
       </div>
     </main>

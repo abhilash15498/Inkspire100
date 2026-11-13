@@ -19,6 +19,11 @@ export function createGoogleVerifier(clientId) {
           name: String(p.name || ''),
         };
       } catch (err) {
+        console.error('[auth] Google verifyIdToken failed:', err.message);
+        // If credential is not JSON (e.g. an actual Google JWT), rethrow the real Google error
+        if (typeof credential === 'string' && credential.trim().startsWith('ey')) {
+          throw err;
+        }
         if (process.env.NODE_ENV === 'production') throw err;
       }
     }
