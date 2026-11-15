@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import { fmtDate, useAsync } from '../ui.jsx';
+import { parseBlocks, renderBlock } from '../markdown.jsx';
 
 export default function Home() {
   const { user, isAuthor } = useAuth();
@@ -11,6 +12,7 @@ export default function Home() {
 
   const [selectedEdition, setSelectedEdition] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [activeSampleIndex, setActiveSampleIndex] = useState(0);
   const [orderForm, setOrderForm] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -73,6 +75,9 @@ export default function Home() {
   const toggleFaq = (index) => {
     setFaqOpen((prev) => ({ ...prev, [index]: !prev[index] }));
   };
+
+  const sampleList = sampleData.data?.samples || (sampleData.data?.title ? [sampleData.data] : []);
+  const currentSample = sampleList[activeSampleIndex] || sampleList[0] || null;
 
   return (
     <div className="storefront-page">
@@ -181,51 +186,62 @@ export default function Home() {
         </div>
       </section>
 
-      {/* "Look Inside" / Interactive Sample Preview */}
+      {/* "Look Inside" / Dynamic Sample Preview */}
       <section id="sample-preview" className="section-sample-preview">
         <div className="section-head text-center">
           <span className="eyebrow">Look Inside</span>
-          <h2>Read the Opening Prologue</h2>
-          <p className="muted">Experience the actual physical book layout and prose before you pre-order.</p>
+          <h2>Read Free Sample</h2>
+          <p className="muted">Experience the authentic novel layout and prose before unlocking.</p>
         </div>
 
-        <div className="sample-paperback-card">
-          <div className="sample-paperback-header">
-            <span>IS IT ME OR YOU AS WELL?</span>
-            <span>PROLOGUE</span>
-          </div>
-
-          <div className="sample-paperback-body">
-            <h3 className="sample-chapter-title">Prologue</h3>
-            <p className="sample-lead-date">15TH January 2007 , Hospete</p>
-
-            <p>
-              The Day when the product of an unexpected romantic intimacy was about to enter this world.
-            </p>
-            <p>
-              It was around 9:30 am when my mother was having her labor contraction, so much pain only cuz I was in a hurry. She was taken to the same hospital where my sister was born. After all the medical assistance and operations it was around 10:30, a Caramel beige baby boy finally arrived. Yes, that was me.
-            </p>
-            <p>
-              Before we rewind to 2007, here’s a quick snapshot of the guy this story eventually becomes: a typical degree student—broke enough to value a free chai, ambitious enough to dream big, and confused enough to Google his own future every midnight.
-            </p>
-            <p>
-              This isn’t a story about a hero. Not a villain, and definitely not a rom-com protagonist. This is just a story about a boy—a perfectly average middle-class boy—navigating life one awkward chapter after another at a time.
-            </p>
-            <p>
-              Growing up in a middle-class Indian family comes with its own package. Expectations, comparisons, responsibilities, relatives with unsolicited advice, and the constant feeling that everyone else's child is doing better. Some moments were hilarious. Some were embarrassing. Some were lonely. And a few made me question whether it was just me, or you as well.
-            </p>
-          </div>
-
-          <div className="sample-paperback-footer">
-            <div className="sample-footer-fade"></div>
-            <div className="sample-footer-actions">
-              <p className="muted small">Liked the opening? Unlock all chapters online for just ₹30.</p>
-              <button className="btn btn-primary" onClick={() => openCheckout(digitalAccess)}>
-                Unlock Full Novel · ₹30
+        {sampleList.length > 1 && (
+          <div className="sample-tabs-row" style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '20px', flexWrap: 'wrap' }}>
+            {sampleList.map((s, idx) => (
+              <button
+                key={s.id || idx}
+                type="button"
+                className={`btn btn-sm ${activeSampleIndex === idx ? 'btn-primary' : 'btn-outline'}`}
+                style={{ borderRadius: '20px', padding: '6px 18px', fontWeight: 600 }}
+                onClick={() => setActiveSampleIndex(idx)}
+              >
+                {s.number ? `Chapter ${s.number}` : s.title}
               </button>
+            ))}
+          </div>
+        )}
+
+        {currentSample ? (
+          <div className="sample-paperback-card">
+            <div className="sample-paperback-header">
+              <span>{b.title.toUpperCase()}</span>
+              <span>{(currentSample.number ? `CHAPTER ${currentSample.number}` : currentSample.title).toUpperCase()}</span>
+            </div>
+
+            <div className="sample-paperback-body">
+              <h3 className="sample-chapter-title">
+                {currentSample.number ? `Chapter ${currentSample.number}: ${currentSample.title}` : currentSample.title}
+              </h3>
+
+              <div className="sample-chapter-prose">
+                {parseBlocks(currentSample.content).slice(0, 8).map((block, i) => renderBlock(block, i))}
+              </div>
+            </div>
+
+            <div className="sample-paperback-footer">
+              <div className="sample-footer-fade"></div>
+              <div className="sample-footer-actions">
+                <p className="muted small">Liked the opening? Unlock all chapters online for just ₹30.</p>
+                <button className="btn btn-primary" onClick={() => openCheckout(digitalAccess)}>
+                  Unlock Full Novel · ₹30
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="sample-paperback-card text-center" style={{ padding: '40px 20px' }}>
+            <p className="muted">Preview chapters will appear here once published.</p>
+          </div>
+        )}
       </section>
 
       {/* Highlights / What Makes This Book Special */}

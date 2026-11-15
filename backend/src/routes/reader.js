@@ -65,23 +65,26 @@ export function readerRoutes({ db, storage }) {
     }
   });
 
-  // Public sample chapter preview
+  // Public sample chapters preview (e.g. Prologue, Trailer)
   r.get('/sample', async (_req, res) => {
     try {
       const { rows } = await db.query(
         `SELECT c.id, c.chapter_number AS number, v.title, v.content, v.word_count
            FROM chapters c JOIN ${PUBLISHED_JOIN}
           WHERE c.is_published
-          ORDER BY c.sort_order ASC, c.chapter_number ASC NULLS LAST, c.id ASC
-          LIMIT 1`,
+          ORDER BY c.sort_order ASC, c.chapter_number ASC NULLS LAST, c.id ASC`,
       );
-      if (rows[0]) {
+      if (rows.length > 0) {
+        const samples = rows.map((r) => ({
+          id: r.id,
+          number: r.number,
+          title: r.title,
+          content: r.content,
+          wordCount: r.word_count,
+        }));
         res.json({
-          id: rows[0].id,
-          number: rows[0].number,
-          title: rows[0].title,
-          content: rows[0].content,
-          wordCount: rows[0].word_count,
+          ...samples[0],
+          samples,
         });
       } else {
         res.json(null);

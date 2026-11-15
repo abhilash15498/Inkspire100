@@ -26,8 +26,8 @@ export default function About() {
 
           <h2>The Genesis of the Novel</h2>
           <p>
-            Every great journey starts with an ordinary beginning. On 15th January 2007 in Hospete, Karnataka,
-            a caramel beige baby boy entered the world in a hurry. What followed was the quintessential Indian middle-class upbringing—a world of unspoken parental sacrifices, unsolicited relative advice, engineering dreams, midnight chai, and the persistent pressure that everyone else’s child is somehow doing better.
+            Every great journey starts with an ordinary beginning. Rooted in the middle-class realities of growing up in Hospete, Karnataka,
+            <em>Is It Me or You as Well?</em> explores a world of unspoken parental sacrifices, unsolicited relative advice, engineering dreams, midnight chai, and the persistent pressure that everyone else’s child is somehow doing better.
           </p>
           <p>
             <em>Is It Me or You as Well?</em> was born from a desire to tell the unvarnished truth. Not an idealized fiction of billionaire romance or flawless movie characters, but the authentic comedy, confusion, loneliness, and triumphs of young people growing up in India today.
