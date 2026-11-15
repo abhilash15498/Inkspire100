@@ -14,7 +14,7 @@ export const onUnauthorized = (fn) => {
   unauthorizedHandler = fn;
 };
 
-async function request(method, path, { body, form } = {}) {
+async function request(method, path, { body, form } = {}, attempt = 1) {
   // This header is part of the server's protection against cross-site request forgery.
   const headers = { 'X-Requested-With': 'fetch' };
   let payload;
@@ -27,9 +27,21 @@ async function request(method, path, { body, form } = {}) {
   try {
     res = await fetch(BASE + path, { method, headers, body: payload, credentials: 'include' });
   } catch {
+    // If the backend was just booting up, retry once after a short moment
+    if (attempt < 2) {
+      await new Promise((r) => setTimeout(r, 800));
+      return request(method, path, { body, form }, attempt + 1);
+    }
     throw new ApiError(0, 'Could not reach the server. Check your internet connection and try again.');
   }
+
+  // If the dev proxy returns a non-JSON 500/502/503/504 while the server is cold-starting
   const isJson = (res.headers.get('content-type') || '').includes('application/json');
+  if (res.status >= 500 && !isJson && attempt < 2) {
+    await new Promise((r) => setTimeout(r, 800));
+    return request(method, path, { body, form }, attempt + 1);
+  }
+
   const data = isJson ? await res.json().catch(() => null) : null;
   if (!res.ok) {
     if (res.status === 401 && !path.startsWith('/auth/')) unauthorizedHandler();

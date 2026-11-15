@@ -15,7 +15,7 @@ import { authorRoutes } from './routes/author.js';
  * Builds the Express app. Everything it needs (database, file storage, Google
  * token checker) is passed in, which keeps it easy to test.
  */
-export function createApp({ config, db, storage, verifyGoogle }) {
+export function createApp({ config, db, storage, verifyGoogle, dbReadyPromise }) {
   const app = express();
   app.disable('x-powered-by');
   if (config.trustProxy) app.set('trust proxy', 1);
@@ -57,6 +57,18 @@ export function createApp({ config, db, storage, verifyGoogle }) {
         allowedHeaders: ['Content-Type', 'X-Requested-With'],
       }),
     );
+  }
+
+  // Gracefully wait for database cold-start if server started listening immediately
+  if (dbReadyPromise) {
+    app.use('/api', async (_req, _res, next) => {
+      try {
+        await dbReadyPromise;
+      } catch (err) {
+        console.warn('[db] Startup ready wait error:', err.message);
+      }
+      next();
+    });
   }
 
   app.use(express.json({ limit: '2mb' }));

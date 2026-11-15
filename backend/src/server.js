@@ -23,42 +23,50 @@ try {
 }
 
 const db = createPgDb(config.databaseUrl);
-const applied = await migrate(db);
-if (applied.length) console.log('Database updated:', applied.join(', '));
 
-if (config.googleClientId === 'dev-mode') {
+const dbReadyPromise = (async () => {
   try {
-    await db.query(
-      `INSERT INTO reviewer_access (email, note)
-       VALUES ('reviewer@example.com', 'Dev demo reviewer')
-       ON CONFLICT (email) DO NOTHING`
-    );
-    const existing = await db.query('SELECT count(*)::int as count FROM chapters');
-    if (existing.rows[0]?.count === 0) {
-      const sampleText = 'It was a quiet afternoon when the manuscript arrived on the desk.\n\n***\n\nEvery journey begins with a single line of thought.';
-      const ins = await db.query(
-        `INSERT INTO chapters (chapter_number, title, content, is_published, published_version)
-         VALUES (1, 'Chapter 1: The Beginning', $1, true, 1)
-         RETURNING id`,
-        [sampleText]
-      );
-      const chId = ins.rows[0].id;
-      await db.query(
-        `INSERT INTO chapter_versions (chapter_id, version_number, title, content, word_count, change_note)
-         VALUES ($1, 1, 'Chapter 1: The Beginning', $2, 20, 'First published version')`,
-        [chId, sampleText]
-      );
+    const applied = await migrate(db);
+    if (applied.length) console.log('Database updated:', applied.join(', '));
+
+    if (config.googleClientId === 'dev-mode') {
+      try {
+        await db.query(
+          `INSERT INTO reviewer_access (email, note)
+           VALUES ('reviewer@example.com', 'Dev demo reviewer')
+           ON CONFLICT (email) DO NOTHING`
+        );
+        const existing = await db.query('SELECT count(*)::int as count FROM chapters');
+        if (existing.rows[0]?.count === 0) {
+          const sampleText = 'It was a quiet afternoon when the manuscript arrived on the desk.\n\n***\n\nEvery journey begins with a single line of thought.';
+          const ins = await db.query(
+            `INSERT INTO chapters (chapter_number, title, content, is_published, published_version)
+             VALUES (1, 'Chapter 1: The Beginning', $1, true, 1)
+             RETURNING id`,
+            [sampleText]
+          );
+          const chId = ins.rows[0].id;
+          await db.query(
+            `INSERT INTO chapter_versions (chapter_id, version_number, title, content, word_count, change_note)
+             VALUES ($1, 1, 'Chapter 1: The Beginning', $2, 20, 'First published version')`,
+            [chId, sampleText]
+          );
+        }
+      } catch (seedErr) {
+        // Non-fatal if already seeded
+      }
     }
-  } catch (seedErr) {
-    // Non-fatal if already seeded
+  } catch (err) {
+    console.error('[db] Initialization warning:', err.message);
   }
-}
+})();
 
 const app = createApp({
   config,
   db,
   storage: createStorage(config),
   verifyGoogle: createGoogleVerifier(config.googleClientId),
+  dbReadyPromise,
 });
 
 const server = app.listen(config.port, () => {

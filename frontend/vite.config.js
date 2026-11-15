@@ -6,7 +6,12 @@ export default defineConfig({
   server: {
     port: 5173,
     // While developing, requests to /api are forwarded to the backend.
-    proxy: { '/api': 'http://localhost:4000' },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+      },
+    },
   },
   test: {
     environment: 'jsdom',
