@@ -53,7 +53,7 @@ export function loadConfig(env = process.env) {
       port: Number(env.SMTP_PORT) || 587,
       secure: env.SMTP_SECURE === 'true' || Number(env.SMTP_PORT) === 465,
       user: env.SMTP_USER || '',
-      pass: env.SMTP_PASS || '',
+      pass: (env.SMTP_PASS || '').replace(/\s+/g, ''),
       from: env.SMTP_FROM || '"Is It Me or You as Well?" <noreply@example.com>',
     },
     storage: {
