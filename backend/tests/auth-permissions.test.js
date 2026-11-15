@@ -161,3 +161,62 @@ test('cookie is Secure and cross-site when CROSS_SITE_COOKIES=true', async () =>
     await x.close();
   }
 });
+
+test('password reset workflow: request link, reset password, and login with new password', async () => {
+  const c = t.client();
+  // Invite the reader first since OPEN_REGISTRATION is false in this test suite
+  await t.author.post('/api/author/reviewers', { emails: 'resetme@example.com' });
+
+  // 1. Register a reader
+  const reg = await c.post('/api/auth/register', {
+    name: 'Reset Reader',
+    email: 'resetme@example.com',
+    password: 'oldpassword123',
+  });
+  assert.equal(reg.status, 201);
+
+  // 2. Request forgot-password
+  const forgot = await c.post('/api/auth/forgot-password', { email: 'resetme@example.com' });
+  assert.equal(forgot.status, 200);
+  assert.match(forgot.data.message, /password reset link has been sent/i);
+
+  // Non-existent email also returns generic message (prevents user enumeration)
+  const nonExistent = await c.post('/api/auth/forgot-password', { email: 'nobody@example.com' });
+  assert.equal(nonExistent.status, 200);
+
+  // 3. Look up token in password_resets table
+  const user = (await t.db.query("SELECT id FROM users WHERE email = 'resetme@example.com'")).rows[0];
+  const resetRow = (await t.db.query('SELECT token_hash FROM password_resets WHERE user_id = $1 AND used_at IS NULL', [user.id])).rows[0];
+  assert.ok(resetRow);
+
+  // 4. Test invalid token
+  const badToken = await c.post('/api/auth/reset-password', { token: 'invalid-hex-token', password: 'newpassword123' });
+  assert.equal(badToken.status, 400);
+
+  // 5. Test valid reset with a raw token that matches the hash
+  // Insert a known raw token
+  const rawToken = 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890';
+  const crypto = await import('node:crypto');
+  const knownHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+  await t.db.query(
+    'INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES ($1, $2, now() + interval \'1 hour\')',
+    [user.id, knownHash],
+  );
+
+  const resetSuccess = await c.post('/api/auth/reset-password', { token: rawToken, password: 'brandnewpassword123' });
+  assert.equal(resetSuccess.status, 200);
+  assert.equal(resetSuccess.data.user.email, 'resetme@example.com');
+
+  // 6. Token cannot be reused
+  const reuse = await c.post('/api/auth/reset-password', { token: rawToken, password: 'anotherpassword123' });
+  assert.equal(reuse.status, 400);
+
+  // 7. Old password no longer works
+  const oldLogin = await c.post('/api/auth/login', { email: 'resetme@example.com', password: 'oldpassword123' });
+  assert.equal(oldLogin.status, 401);
+
+  // 8. New password logs in successfully
+  const newLogin = await c.post('/api/auth/login', { email: 'resetme@example.com', password: 'brandnewpassword123' });
+  assert.equal(newLogin.status, 200);
+  assert.equal(newLogin.data.user.email, 'resetme@example.com');
+});

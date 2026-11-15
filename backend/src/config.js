@@ -47,6 +47,15 @@ export function loadConfig(env = process.env) {
     maxUploadMb: Number(env.MAX_UPLOAD_MB) || 10,
     rateLimit: env.DISABLE_RATE_LIMIT !== 'true',
     staticDir: env.STATIC_DIR || path.resolve(backendRoot, '../frontend/dist'),
+    appUrl: env.APP_URL || env.APP_ORIGIN || (!isProd ? 'http://localhost:5173' : ''),
+    smtp: {
+      host: env.SMTP_HOST || '',
+      port: Number(env.SMTP_PORT) || 587,
+      secure: env.SMTP_SECURE === 'true' || Number(env.SMTP_PORT) === 465,
+      user: env.SMTP_USER || '',
+      pass: env.SMTP_PASS || '',
+      from: env.SMTP_FROM || '"Is It Me or You as Well?" <noreply@example.com>',
+    },
     storage: {
       provider: (env.STORAGE_PROVIDER || 'local').toLowerCase(),
       localDir: env.LOCAL_STORAGE_DIR || path.resolve(backendRoot, 'uploads'),

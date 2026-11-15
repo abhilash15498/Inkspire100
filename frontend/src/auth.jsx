@@ -47,6 +47,16 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const requestPasswordReset = useCallback(async (email) => {
+    return api.post('/auth/forgot-password', { email });
+  }, []);
+
+  const resetPasswordWithToken = useCallback(async (token, password) => {
+    const d = await api.post('/auth/reset-password', { token, password });
+    setUser(d.user);
+    return d.user;
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
@@ -55,10 +65,12 @@ export function AuthProvider({ children }) {
       loginWithGoogle,
       loginWithPassword,
       registerWithPassword,
+      requestPasswordReset,
+      resetPasswordWithToken,
       logout,
       isAuthor: user?.role === 'author',
     }),
-    [user, loading, loginWithGoogle, loginWithPassword, registerWithPassword, logout],
+    [user, loading, loginWithGoogle, loginWithPassword, registerWithPassword, requestPasswordReset, resetPasswordWithToken, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth } from './auth.jsx';
 import { AuthorLayout, Layout, Loading, PageHeader } from './ui.jsx';
 import Login from './pages/Login.jsx';
+import ResetPassword from './pages/ResetPassword.jsx';
 import Home from './pages/Home.jsx';
 import About from './pages/About.jsx';
 import Privacy from './pages/Privacy.jsx';
@@ -42,6 +43,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route element={<Layout />}>
         {/* Public Storefront & Legal Routes */}
         <Route index element={<Home />} />

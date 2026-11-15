@@ -1,9 +1,10 @@
+import crypto from 'node:crypto';
 import { Router } from 'express';
 import { HttpError, text } from '../http.js';
 import { issueSession, clearSession } from '../middleware/auth.js';
 import { hashPassword, verifyPassword } from '../services/password.js';
 
-export function authRoutes({ config, db, verifyGoogle }) {
+export function authRoutes({ config, db, verifyGoogle, emailService }) {
   const r = Router();
 
   // Public: what the login page needs.
@@ -116,6 +117,98 @@ export function authRoutes({ config, db, verifyGoogle }) {
 
     issueSession(res, config, u.id);
     res.json({ user: { id: u.id, email: u.email, name: u.display_name, role } });
+  });
+
+  // Request password reset email
+  r.post('/auth/forgot-password', async (req, res) => {
+    const email = text(req.body?.email, { name: 'email', required: true, max: 254 }).toLowerCase();
+
+    const { rows } = await db.query(
+      'SELECT id, display_name, email FROM users WHERE lower(email) = $1',
+      [email],
+    );
+    const user = rows[0];
+
+    if (user && emailService) {
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      // Invalidate any previous unused reset tokens for this user
+      await db.query(
+        'UPDATE password_resets SET used_at = now() WHERE user_id = $1 AND used_at IS NULL',
+        [user.id],
+      );
+
+      await db.query(
+        `INSERT INTO password_resets (user_id, token_hash, expires_at)
+         VALUES ($1, $2, $3)`,
+        [user.id, tokenHash, expiresAt],
+      );
+
+      const baseUrl = config.appUrl || 'http://localhost:5173';
+      const resetUrl = `${baseUrl.replace(/\/$/, '')}/reset-password?token=${rawToken}`;
+
+      try {
+        await emailService.sendPasswordResetEmail({
+          to: user.email,
+          name: user.display_name,
+          resetUrl,
+        });
+      } catch (err) {
+        console.error('[auth] Could not send password reset email:', err.message);
+      }
+    }
+
+    // Always respond with a generic success to prevent email enumeration
+    res.json({
+      message: 'If an account exists with that email address, a password reset link has been sent. Please check your inbox.',
+    });
+  });
+
+  // Reset password using verified token
+  r.post('/auth/reset-password', async (req, res) => {
+    const rawToken = text(req.body?.token, { name: 'token', required: true, max: 200 });
+    const rawPassword = req.body?.password;
+    if (typeof rawPassword !== 'string' || rawPassword.length < 6) {
+      throw new HttpError(400, 'Password must be at least 6 characters long.', 'invalid_password');
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+    const { rows } = await db.query(
+      `SELECT pr.id AS reset_id, pr.user_id, pr.expires_at, pr.used_at, u.email, u.display_name, u.role
+         FROM password_resets pr
+         JOIN users u ON u.id = pr.user_id
+        WHERE pr.token_hash = $1`,
+      [tokenHash],
+    );
+
+    const record = rows[0];
+    if (!record || record.used_at !== null || new Date(record.expires_at).getTime() < Date.now()) {
+      throw new HttpError(400, 'This password reset link is invalid or has expired. Please request a new one.', 'invalid_token');
+    }
+
+    const passwordHash = await hashPassword(rawPassword);
+
+    await db.tx(async (t) => {
+      await t.query('UPDATE password_resets SET used_at = now() WHERE id = $1', [record.reset_id]);
+      await t.query('UPDATE users SET password_hash = $1, last_login_at = now() WHERE id = $2', [passwordHash, record.user_id]);
+    });
+
+    const isAuthor = config.authorEmails.includes(record.email.toLowerCase());
+    const role = isAuthor ? 'author' : 'reviewer';
+
+    issueSession(res, config, record.user_id);
+    res.json({
+      message: 'Your password has been reset successfully.',
+      user: {
+        id: record.user_id,
+        email: record.email,
+        name: record.display_name,
+        role,
+      },
+    });
   });
 
   // Google OAuth Login

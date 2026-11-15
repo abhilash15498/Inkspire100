@@ -10,13 +10,15 @@ import { loadUser, csrfGuard } from './middleware/auth.js';
 import { authRoutes } from './routes/auth.js';
 import { readerRoutes } from './routes/reader.js';
 import { authorRoutes } from './routes/author.js';
+import { createEmailService } from './services/email.js';
 
 /**
  * Builds the Express app. Everything it needs (database, file storage, Google
  * token checker) is passed in, which keeps it easy to test.
  */
-export function createApp({ config, db, storage, verifyGoogle, dbReadyPromise }) {
+export function createApp({ config, db, storage, verifyGoogle, dbReadyPromise, emailService }) {
   const app = express();
+  const mailer = emailService || createEmailService(config);
   app.disable('x-powered-by');
   if (config.trustProxy) app.set('trust proxy', 1);
 
@@ -93,7 +95,7 @@ export function createApp({ config, db, storage, verifyGoogle, dbReadyPromise })
     await db.query('SELECT 1');
     res.json({ ok: true });
   });
-  app.use('/api', authRoutes({ config, db, verifyGoogle }));
+  app.use('/api', authRoutes({ config, db, verifyGoogle, emailService: mailer }));
   app.use('/api/author', authorRoutes({ config, db, storage }));
   app.use('/api', readerRoutes({ db, storage }));
   app.use('/api', (_req, _res, next) => next(new HttpError(404, 'Not found.')));
