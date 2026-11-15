@@ -2,7 +2,7 @@ import nodemailer from 'nodemailer';
 
 export function createEmailService(config) {
   const smtp = config.smtp || {};
-  const hasSmtp = Boolean(smtp.host && smtp.user);
+  const hasSmtp = Boolean(smtp.host && smtp.user && smtp.pass);
 
   let transporter = null;
   if (hasSmtp) {
