@@ -10,8 +10,10 @@ import Terms from './pages/Terms.jsx';
 import Book from './pages/Book.jsx';
 import Chapters from './pages/Chapters.jsx';
 import Reader from './pages/Reader.jsx';
+import Receipt from './pages/Receipt.jsx';
 import MyFeedback from './pages/MyFeedback.jsx';
 import Dashboard from './author/Dashboard.jsx';
+import Orders from './author/Orders.jsx';
 import ChapterEditor from './author/ChapterEditor.jsx';
 import NewChapter from './author/NewChapter.jsx';
 import FeedbackInbox from './author/FeedbackInbox.jsx';
@@ -61,14 +63,8 @@ export default function App() {
             </RequireAuth>
           }
         />
-        <Route
-          path="chapters/:id"
-          element={
-            <RequireAuth>
-              <Reader />
-            </RequireAuth>
-          }
-        />
+        <Route path="chapters/:id" element={<Reader />} />
+        <Route path="receipt/:orderId" element={<Receipt />} />
         <Route
           path="feedback"
           element={
@@ -90,6 +86,7 @@ export default function App() {
           }
         >
           <Route index element={<Dashboard />} />
+          <Route path="orders" element={<Orders />} />
           <Route path="chapters/new" element={<NewChapter />} />
           <Route path="chapters/:id" element={<ChapterEditor />} />
           <Route path="feedback" element={<FeedbackInbox />} />

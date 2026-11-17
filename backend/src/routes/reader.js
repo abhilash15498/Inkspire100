@@ -4,7 +4,7 @@ import { HttpError, notFound, parseId, text, CATEGORIES } from '../http.js';
 
 const PUBLISHED_JOIN = `chapter_versions v ON v.chapter_id = c.id AND v.version_number = c.published_version`;
 
-const chapterSummary = (r) => ({
+const chapterSummary = (r, isLocked = false) => ({
   id: r.id,
   number: r.number,
   title: r.title,
@@ -12,6 +12,7 @@ const chapterSummary = (r) => ({
   updatedAt: r.updated_at,
   changeNote: r.change_note,
   wordCount: r.word_count,
+  locked: isLocked,
   myFeedbackCount: r.my_feedback_count,
   updatedSinceMyFeedback: r.my_last_feedback_version !== null && r.my_last_feedback_version < r.version,
 });
@@ -65,13 +66,17 @@ export function readerRoutes({ db, storage }) {
     }
   });
 
-  // Public sample chapters preview (e.g. Prologue, Trailer)
+  // Public sample chapters preview — ONLY Trailer and Prologue are free to the public!
   r.get('/sample', async (_req, res) => {
     try {
       const { rows } = await db.query(
         `SELECT c.id, c.chapter_number AS number, v.title, v.content, v.word_count
            FROM chapters c JOIN ${PUBLISHED_JOIN}
           WHERE c.is_published
+            AND (
+              lower(v.title) LIKE '%trailer%'
+              OR lower(v.title) LIKE '%prologue%'
+            )
           ORDER BY c.sort_order ASC, c.chapter_number ASC NULLS LAST, c.id ASC`,
       );
       if (rows.length > 0) {
@@ -94,6 +99,82 @@ export function readerRoutes({ db, storage }) {
     }
   });
 
+  // Chapter reader: Trailer and Prologue are free; all numbered chapters require sign-in!
+  r.get('/chapters/:id', async (req, res) => {
+    const id = parseId(req.params.id);
+    const userId = req.user?.id || 0;
+    const { rows } = await db.query(
+      `SELECT c.id, c.chapter_number AS number, v.title, v.content, v.version_number AS version,
+              v.created_at AS updated_at, v.change_note, v.word_count,
+              (SELECT count(*)::int FROM feedback f WHERE f.chapter_id = c.id AND f.user_id = $2) AS my_feedback_count,
+              (SELECT max(f.version_number) FROM feedback f WHERE f.chapter_id = c.id AND f.user_id = $2) AS my_last_feedback_version
+         FROM chapters c JOIN ${PUBLISHED_JOIN}
+        WHERE c.id = $1 AND c.is_published`,
+      [id, userId],
+    );
+    if (!rows[0]) throw notFound('This chapter is not available.');
+    const c = rows[0];
+
+    // Access check: only Trailer and Prologue are free to public visitors!
+    const isFreePreview = !c.number && (c.title?.toLowerCase().includes('trailer') || c.title?.toLowerCase().includes('prologue'));
+    if (!isFreePreview) {
+      if (!req.user) {
+        throw new HttpError(401, 'This chapter is private. Only the Trailer and Prologue are free to read. Please sign in or unlock the novel.', 'chapter_locked');
+      }
+
+      if (req.user.role !== 'author') {
+        const email = req.user.email?.toLowerCase();
+        const rev = await db.query(
+          `SELECT id, note, revoked_at FROM reviewer_access WHERE lower(email) = $1`,
+          [email],
+        );
+        const isVipReviewer = rev.rows.length > 0 && !rev.rows[0].revoked_at && rev.rows[0].note !== 'Registered reader';
+
+        if (!isVipReviewer) {
+          const order = await db.query(
+            `SELECT id FROM orders WHERE (user_id = $1 OR lower(customer_email) = $2) AND status = 'completed' LIMIT 1`,
+            [req.user.id, email || ''],
+          );
+          if (order.rows.length === 0) {
+            throw new HttpError(403, 'This chapter is locked. Unlock the complete novel for ₹30 to continue reading.', 'payment_required');
+          }
+        }
+      }
+    }
+
+    const [adjacent, pdf] = await Promise.all([
+      db.query(
+        `WITH ordered AS (
+           SELECT id,
+                  LAG(id) OVER (ORDER BY sort_order ASC, chapter_number ASC NULLS LAST, id ASC) AS prev_id,
+                  LEAD(id) OVER (ORDER BY sort_order ASC, chapter_number ASC NULLS LAST, id ASC) AS next_id
+             FROM chapters
+            WHERE is_published
+         )
+         SELECT prev_id, next_id FROM ordered WHERE id = $1`,
+        [id],
+      ),
+      req.user
+        ? db.query(
+            `SELECT id, original_name, size_bytes FROM chapter_files
+              WHERE chapter_id = $1 AND shared_with_reviewers ORDER BY uploaded_at DESC LIMIT 1`,
+            [id],
+          )
+        : Promise.resolve({ rows: [] }),
+    ]);
+    res.json({
+      chapter: {
+        ...chapterSummary(c),
+        content: c.content,
+        prevId: adjacent.rows[0]?.prev_id ?? null,
+        nextId: adjacent.rows[0]?.next_id ?? null,
+        pdf: pdf.rows[0]
+          ? { name: pdf.rows[0].original_name, sizeBytes: pdf.rows[0].size_bytes, url: `/api/chapters/${id}/pdf` }
+          : null,
+      },
+    });
+  });
+
   r.use(requireUser);
 
   r.get('/book', async (_req, res) => {
@@ -109,6 +190,30 @@ export function readerRoutes({ db, storage }) {
   });
 
   r.get('/chapters', async (req, res) => {
+    const isAuthor = req.user.role === 'author';
+    const email = req.user.email?.toLowerCase();
+    let hasFullAccess = isAuthor;
+
+    if (!hasFullAccess && email) {
+      const rev = await db.query(
+        `SELECT id, note, revoked_at FROM reviewer_access WHERE lower(email) = $1`,
+        [email],
+      );
+      if (rev.rows.length > 0 && !rev.rows[0].revoked_at && rev.rows[0].note !== 'Registered reader') {
+        hasFullAccess = true;
+      }
+    }
+
+    if (!hasFullAccess) {
+      const order = await db.query(
+        `SELECT id FROM orders WHERE (user_id = $1 OR lower(customer_email) = $2) AND status = 'completed' LIMIT 1`,
+        [req.user.id, email || ''],
+      );
+      if (order.rows.length > 0) {
+        hasFullAccess = true;
+      }
+    }
+
     const { rows } = await db.query(
       `SELECT c.id, c.chapter_number AS number, v.title, v.version_number AS version,
               v.created_at AS updated_at, v.change_note, v.word_count,
@@ -119,50 +224,13 @@ export function readerRoutes({ db, storage }) {
         ORDER BY c.sort_order ASC, c.chapter_number ASC NULLS LAST, c.id ASC`,
       [req.user.id],
     );
-    res.json({ chapters: rows.map(chapterSummary) });
-  });
-
-  r.get('/chapters/:id', async (req, res) => {
-    const id = parseId(req.params.id);
-    const { rows } = await db.query(
-      `SELECT c.id, c.chapter_number AS number, v.title, v.content, v.version_number AS version,
-              v.created_at AS updated_at, v.change_note, v.word_count,
-              (SELECT count(*)::int FROM feedback f WHERE f.chapter_id = c.id AND f.user_id = $2) AS my_feedback_count,
-              (SELECT max(f.version_number) FROM feedback f WHERE f.chapter_id = c.id AND f.user_id = $2) AS my_last_feedback_version
-         FROM chapters c JOIN ${PUBLISHED_JOIN}
-        WHERE c.id = $1 AND c.is_published`,
-      [id, req.user.id],
-    );
-    if (!rows[0]) throw notFound('This chapter is not available.');
-    const c = rows[0];
-    const [adjacent, pdf] = await Promise.all([
-      db.query(
-        `WITH ordered AS (
-           SELECT id,
-                  LAG(id) OVER (ORDER BY sort_order ASC, chapter_number ASC NULLS LAST, id ASC) AS prev_id,
-                  LEAD(id) OVER (ORDER BY sort_order ASC, chapter_number ASC NULLS LAST, id ASC) AS next_id
-             FROM chapters
-            WHERE is_published
-         )
-         SELECT prev_id, next_id FROM ordered WHERE id = $1`,
-        [id],
-      ),
-      db.query(
-        `SELECT id, original_name, size_bytes FROM chapter_files
-          WHERE chapter_id = $1 AND shared_with_reviewers ORDER BY uploaded_at DESC LIMIT 1`,
-        [id],
-      ),
-    ]);
     res.json({
-      chapter: {
-        ...chapterSummary(c),
-        content: c.content,
-        prevId: adjacent.rows[0]?.prev_id ?? null,
-        nextId: adjacent.rows[0]?.next_id ?? null,
-        pdf: pdf.rows[0]
-          ? { name: pdf.rows[0].original_name, sizeBytes: pdf.rows[0].size_bytes, url: `/api/chapters/${id}/pdf` }
-          : null,
-      },
+      chapters: rows.map((r) => {
+        const isFree = !r.number && (r.title?.toLowerCase().includes('trailer') || r.title?.toLowerCase().includes('prologue'));
+        const locked = !hasFullAccess && !isFree;
+        return chapterSummary(r, locked);
+      }),
+      hasFullAccess,
     });
   });
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import { Notice, errMsg } from '../ui.jsx';
@@ -30,6 +30,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [agreeTerms, setAgreeTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [forgotSent, setForgotSent] = useState(false);
@@ -61,6 +62,21 @@ export default function Login() {
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    if (tab === 'register') {
+      const cleanName = name.trim();
+      if (!agreeTerms) {
+        setError('Please agree to the Terms of Service and Privacy Policy before creating an account.');
+        return;
+      }
+      if (cleanName.length < 2 || /^(.)\1+$|^(abcd|asdf|test|qwerty|1234)$/i.test(cleanName)) {
+        setError('Please enter a valid reader name.');
+        return;
+      }
+      if (/^(abcd|test|asdf|dummy)@/i.test(email.trim())) {
+        setError('Please enter a valid personal email address.');
+        return;
+      }
+    }
     setSubmitting(true);
     try {
       if (tab === 'register') {
@@ -269,6 +285,23 @@ export default function Login() {
         ) : (
           /* Email & Password Form */
           <form onSubmit={handlePasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {tab === 'register' && config?.openRegistration === false && (
+              <div
+                style={{
+                  fontSize: '0.82rem',
+                  lineHeight: 1.4,
+                  background: 'rgba(217, 119, 6, 0.1)',
+                  color: 'var(--text)',
+                  border: '1px solid rgba(217, 119, 6, 0.25)',
+                  borderRadius: '6px',
+                  padding: '0.65rem 0.85rem',
+                  textAlign: 'left',
+                }}
+              >
+                🔒 <strong>Invitation-only access:</strong> Please use the exact email address invited by the author to create your account.
+              </div>
+            )}
+
             {tab === 'register' && (
               <div className="form-group" style={{ textAlign: 'left' }}>
                 <label htmlFor="auth-name" style={{ display: 'block', fontSize: '0.88rem', fontWeight: 600, marginBottom: '0.3rem' }}>
@@ -341,10 +374,35 @@ export default function Login() {
               </div>
             )}
 
+            {tab === 'register' && (
+              <div className="form-group" style={{ textAlign: 'left', marginTop: '-0.2rem' }}>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text)' }}>
+                  <input
+                    type="checkbox"
+                    required
+                    checked={agreeTerms}
+                    onChange={(e) => setAgreeTerms(e.target.checked)}
+                    style={{ marginTop: '0.2rem', accentColor: 'var(--accent)', cursor: 'pointer' }}
+                  />
+                  <span>
+                    I agree to the{' '}
+                    <Link to="/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>
+                      Terms of Service
+                    </Link>{' '}
+                    and{' '}
+                    <Link to="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>
+                      Privacy Policy
+                    </Link>
+                    .
+                  </span>
+                </label>
+              </div>
+            )}
+
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={submitting}
+              disabled={submitting || (tab === 'register' && !agreeTerms)}
               style={{ width: '100%', padding: '0.75rem', fontSize: '1rem', marginTop: '0.5rem', fontWeight: 600 }}
             >
               {submitting ? 'Please wait…' : tab === 'register' ? 'Create Account & Read' : 'Sign In'}

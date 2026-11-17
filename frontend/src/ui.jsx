@@ -146,6 +146,7 @@ export function Layout() {
                 <NavLink to="/author" end>
                   Chapters & Editor
                 </NavLink>
+                <NavLink to="/author/orders">Sales & Orders</NavLink>
                 <NavLink to="/author/feedback">Feedback Inbox</NavLink>
                 <NavLink to="/author/reviewers">Reviewers</NavLink>
                 <NavLink to="/author/book">Book Details</NavLink>

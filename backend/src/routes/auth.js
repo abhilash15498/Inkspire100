@@ -31,18 +31,29 @@ export function authRoutes({ config, db, verifyGoogle, emailService }) {
   // Password-based Register
   r.post('/auth/register', async (req, res) => {
     const email = text(req.body?.email, { name: 'email', required: true, max: 254 }).toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email) || /^(abcd|test|asdf|dummy|fake)@/i.test(email)) {
+      throw new HttpError(400, 'Please enter a valid personal email address.', 'invalid_email');
+    }
+
     const rawPassword = req.body?.password;
     if (typeof rawPassword !== 'string' || rawPassword.length < 6) {
       throw new HttpError(400, 'Password must be at least 6 characters long.', 'invalid_password');
     }
-    const name = text(req.body?.name, { name: 'name', required: false, max: 200 }) || email.split('@')[0];
+    const rawName = text(req.body?.name, { name: 'name', required: false, max: 200 }) || email.split('@')[0];
+    const name = rawName.trim();
+    const isDummyName = /^(.)\1+$|^(abcd|asdf|test|qwerty|1234|null|undefined)$/i.test(name);
+    const hasLetters = /[a-zA-Z]/.test(name);
+    if (isDummyName || !hasLetters || name.length < 2) {
+      throw new HttpError(400, 'Please enter a valid reader name.', 'invalid_name');
+    }
 
     // Automatic role: Author if in AUTHOR_EMAILS, otherwise Reader (reviewer)
     const isAuthor = config.authorEmails.includes(email);
     if (!isAuthor && !config.openRegistration) {
       const access = await db.query('SELECT id, revoked_at FROM reviewer_access WHERE email = $1', [email]);
       if (access.rows.length === 0 || access.rows[0].revoked_at !== null) {
-        throw new HttpError(403, 'This email address has not been invited to access the manuscript.', 'not_invited');
+        throw new HttpError(403, 'This email address has not been invited by the author. Access is invitation-only.', 'not_invited');
       }
     }
 
@@ -83,40 +94,53 @@ export function authRoutes({ config, db, verifyGoogle, emailService }) {
   });
 
   // Password-based Login
-  r.post('/auth/login', async (req, res) => {
-    const email = text(req.body?.email, { name: 'email', required: true, max: 254 }).toLowerCase();
-    const rawPassword = req.body?.password;
-    if (typeof rawPassword !== 'string' || !rawPassword) {
-      throw new HttpError(400, 'Please enter your password.', 'missing_password');
-    }
-
-    const { rows } = await db.query(
-      'SELECT id, email, display_name, role, password_hash FROM users WHERE lower(email) = $1',
-      [email],
-    );
-    const u = rows[0];
-    if (!u || !u.password_hash) {
-      throw new HttpError(401, 'Incorrect email or password. Please try again.', 'invalid_credentials');
-    }
-
-    const valid = await verifyPassword(rawPassword, u.password_hash);
-    if (!valid) {
-      throw new HttpError(401, 'Incorrect email or password. Please try again.', 'invalid_credentials');
-    }
-
-    const isAuthor = config.authorEmails.includes(email);
-    if (!isAuthor) {
-      const access = await db.query('SELECT id, revoked_at FROM reviewer_access WHERE email = $1', [email]);
-      if (access.rows.length > 0 && access.rows[0].revoked_at !== null) {
-        throw new HttpError(403, 'Your reader access has been revoked by the author.', 'revoked');
+  r.post('/auth/login', async (req, res, next) => {
+    try {
+      const email = text(req.body?.email, { name: 'email', required: true, max: 254 })?.toLowerCase();
+      const rawPassword = req.body?.password;
+      if (typeof rawPassword !== 'string' || !rawPassword) {
+        return res.status(400).json({ error: 'Please enter your password.', code: 'missing_password' });
       }
+
+      const { rows } = await db.query(
+        'SELECT id, email, display_name, role, password_hash FROM users WHERE lower(email) = $1',
+        [email],
+      );
+      const u = rows[0];
+      if (!u || !u.password_hash) {
+        return res.status(401).json({ error: 'Incorrect email or password. Please try again.', code: 'invalid_credentials' });
+      }
+
+      let valid = false;
+      try {
+        valid = await verifyPassword(rawPassword, u.password_hash);
+      } catch {
+        valid = false;
+      }
+
+      if (!valid) {
+        return res.status(401).json({ error: 'Incorrect email or password. Please try again.', code: 'invalid_credentials' });
+      }
+
+      const isAuthor = config.authorEmails.includes(email);
+      if (!isAuthor) {
+        const access = await db.query('SELECT id, revoked_at FROM reviewer_access WHERE email = $1', [email]);
+        if (access.rows.length === 0 && !config.openRegistration) {
+          return res.status(403).json({ error: 'This email address has not been invited by the author. Access is invitation-only.', code: 'not_invited' });
+        }
+        if (access.rows.length > 0 && access.rows[0].revoked_at !== null) {
+          return res.status(403).json({ error: 'Your reader access has been revoked by the author.', code: 'revoked' });
+        }
+      }
+
+      const role = isAuthor ? 'author' : 'reviewer';
+      await db.query('UPDATE users SET last_login_at = now() WHERE id = $1', [u.id]);
+
+      issueSession(res, config, u.id);
+      return res.json({ user: { id: u.id, email: u.email, name: u.display_name, role } });
+    } catch (err) {
+      next(err);
     }
-
-    const role = isAuthor ? 'author' : 'reviewer';
-    await db.query('UPDATE users SET last_login_at = now() WHERE id = $1', [u.id]);
-
-    issueSession(res, config, u.id);
-    res.json({ user: { id: u.id, email: u.email, name: u.display_name, role } });
   });
 
   // Request password reset email

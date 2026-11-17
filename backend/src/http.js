@@ -2,8 +2,17 @@
 export class HttpError extends Error {
   constructor(status, message, code) {
     super(message);
+    this.name = 'HttpError';
     this.status = status;
     this.code = code;
+  }
+
+  static isHttpError(err) {
+    return Boolean(
+      err instanceof HttpError ||
+      err?.name === 'HttpError' ||
+      (typeof err?.status === 'number' && err.status >= 400 && err.status < 600)
+    );
   }
 }
 

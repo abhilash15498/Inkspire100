@@ -44,7 +44,7 @@ export function loadUser({ config, db }) {
     }
     try {
       const { rows } = await db.query(
-        `SELECT u.id, u.email, u.display_name, ra.id AS access_id, ra.revoked_at
+        `SELECT u.id, u.email, u.display_name, ra.id AS access_id, ra.revoked_at, ra.note
            FROM users u
            LEFT JOIN reviewer_access ra ON ra.email = lower(u.email)
           WHERE u.id = $1`,
@@ -60,7 +60,9 @@ export function loadUser({ config, db }) {
       ) {
         role = 'author';
       } else if (u.access_id && !u.revoked_at) {
-        role = 'reviewer';
+        role = u.note === 'Registered reader' ? 'reader' : 'reviewer';
+      } else if (config.openRegistration && !u.revoked_at) {
+        role = 'reader';
       }
       if (role) req.user = { id: u.id, email: u.email, name: u.display_name, role };
     } catch (err) {

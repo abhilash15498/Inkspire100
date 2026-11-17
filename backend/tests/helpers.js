@@ -121,8 +121,8 @@ export class Client {
 }
 
 /** Server + a signed-in author + invited, signed-in reviewers Alice and Bob. */
-export async function setup() {
-  const t = await startTestServer();
+export async function setup(overrides = {}) {
+  const t = await startTestServer(overrides);
   const author = t.client();
   assertStatus(await author.login(AUTHOR), 200);
   assertStatus(await author.post('/api/author/reviewers', { emails: `${ALICE.email}, ${BOB.email}` }), 201);

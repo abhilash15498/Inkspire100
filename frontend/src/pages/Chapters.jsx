@@ -25,6 +25,9 @@ export default function Chapters() {
                   </span>
                 </span>
                 <span className="chapter-chips">
+                  {c.locked && <Chip tone="warn">🔒 Locked · ₹30</Chip>}
+                  {!c.locked && !c.number && <Chip tone="good">Free Preview</Chip>}
+                  {!c.locked && c.number != null && <Chip tone="good">✓ Unlocked</Chip>}
                   {c.updatedSinceMyFeedback && <Chip tone="accent">Updated since your feedback</Chip>}
                   {c.myFeedbackCount > 0 && !c.updatedSinceMyFeedback && <Chip tone="good">Feedback sent</Chip>}
                 </span>

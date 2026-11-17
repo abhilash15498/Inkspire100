@@ -10,6 +10,7 @@ import { loadUser, csrfGuard } from './middleware/auth.js';
 import { authRoutes } from './routes/auth.js';
 import { readerRoutes } from './routes/reader.js';
 import { authorRoutes } from './routes/author.js';
+import { paymentRoutes } from './routes/payment.js';
 import { createEmailService } from './services/email.js';
 
 /**
@@ -97,6 +98,7 @@ export function createApp({ config, db, storage, verifyGoogle, dbReadyPromise, e
   });
   app.use('/api', authRoutes({ config, db, verifyGoogle, emailService: mailer }));
   app.use('/api/author', authorRoutes({ config, db, storage }));
+  app.use('/api', paymentRoutes({ config, db }));
   app.use('/api', readerRoutes({ db, storage }));
   app.use('/api', (_req, _res, next) => next(new HttpError(404, 'Not found.')));
 
@@ -113,7 +115,10 @@ export function createApp({ config, db, storage, verifyGoogle, dbReadyPromise, e
 
   // eslint-disable-next-line no-unused-vars
   app.use((err, _req, res, _next) => {
-    if (err instanceof HttpError) return res.status(err.status).json({ error: err.message, code: err.code });
+    const status = err?.status || err?.statusCode || (HttpError.isHttpError(err) ? err.status : null);
+    if (typeof status === 'number' && status >= 400 && status < 600) {
+      return res.status(status).json({ error: err.message, code: err.code });
+    }
     if (err?.name === 'MulterError') {
       const tooBig = err.code === 'LIMIT_FILE_SIZE';
       return res

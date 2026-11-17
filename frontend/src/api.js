@@ -45,7 +45,10 @@ async function request(method, path, { body, form } = {}, attempt = 1) {
   const data = isJson ? await res.json().catch(() => null) : null;
   if (!res.ok) {
     if (res.status === 401 && !path.startsWith('/auth/')) unauthorizedHandler();
-    throw new ApiError(res.status, data?.error || `Something went wrong (${res.status}).`, data?.code);
+    const fallbackMsg = res.status >= 500 && !isJson
+      ? 'Backend server is unreachable (port 4000). Please check that your server is running.'
+      : `Something went wrong (${res.status}).`;
+    throw new ApiError(res.status, data?.error || fallbackMsg, data?.code);
   }
   return data;
 }
